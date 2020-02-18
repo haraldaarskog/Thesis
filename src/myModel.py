@@ -1,36 +1,56 @@
 import gurobipy as gp
 from gurobipy import GRB
+import numpy as np
 
 
-# tiss
+#Set sizes
+J=2
+T=2
+N=2
+R=3
 
-J=5
-T=5
-N=5
+J_r=1
+
+B=np.matrix([[1,2],[3,4]])
+
+Q_ij=np.matrix([[1,2],[2,2]])
+
+delta_jt=np.matrix([[5,5],[5,5]])
+
 try:
     
 
     # Create a new model
     m = gp.Model("mip1")
-    m.setParam('TimeLimit', 60)
+    #m.setParam('TimeLimit', 60)
     # Create variables
-    x = m.addVar(vtype=GRB.BINARY, name="x")
-    y = m.addVar(vtype=GRB.BINARY, name="y")
     z = m.addVar(vtype=GRB.BINARY, name="z")
-    a = m.addVars(J,T,N,name="a")
+    w = m.addVars(J,T,N,name="w")
+    c = m.addVars(J,T,N, vtype=GRB.INTEGER, name="c")
 
     # Set objective
-    m.setObjective(x + y + 2 * z, GRB.MAXIMIZE)
+    m.setObjective(sum(w[j,t,n]*B[j,n] for j in range(J) for t in range (T) for n in range(N) ), GRB.MINIMIZE)
 
-    # Add constraint: x + 2 y + 3 z <= 4
-    m.addConstr(x + 2 * y + 3 * z <= 4, "c0")
-    for j in range(0,J):
-        m.addConstr(quicksum(a[j,t,n] for t in range(0,T))>= 50, "constr")
+ 
+    #for j in range(0,J):
+        #for n in range(N):
+            #m.addConstr(sum(w[j,t,n] for t in range(0,T))>= 50, "constraint 1")
+        
+    for j in range(J):
+        for t in range(T):          
+            m.addConstr(w[j,t,0]==delta_jt[j,t]+sum(c[i,t,n]*Q_ij[i,j] for i in range(J)))
 
+    for j in range(J):
+        for t in range(1,T):
+            for n in range(1,N):
+                m.addConstr(w[j,t,n] == w[j,t-1,n-1] - c[j,t-1,n-1])
+                
+    for j in range(J):
+        for t in range(T):
+            for n in range(N):
+                m.addConstr(c[j,t,n] <= w[j,t,n])
 
-    # Add constraint: x + y >= 1
-    m.addConstr(x + y >= 1, "c1")
-
+    w[j,t,n].start=100
     # Optimize model
     m.optimize()
 
