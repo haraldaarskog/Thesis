@@ -6,19 +6,18 @@ import numpy as np
 #Set sizes
 J=2
 T=2
-N=2
+N=10
 R=3
 
 J_r=1
 
-B=np.matrix([[1,2],[3,4]])
+B_jn=np.matrix([[1,2,3,4,5,6,7,8,9,10],[1,2,3,4,5,6,7,8,9,10]])
 
-Q_ij=np.matrix([[1,2],[2,2]])
+Q_ij=np.matrix([[1,1],[1,1]])
 
 delta_jt=np.matrix([[5,5],[5,5]])
 
 try:
-    
 
     # Create a new model
     m = gp.Model("mip1")
@@ -29,7 +28,7 @@ try:
     c = m.addVars(J,T,N, vtype=GRB.INTEGER, name="c")
 
     # Set objective
-    m.setObjective(sum(w[j,t,n]*B[j,n] for j in range(J) for t in range (T) for n in range(N) ), GRB.MINIMIZE)
+    m.setObjective(sum(w[j,t,n]*B_jn[j,n] for j in range(J) for t in range (T) for n in range(N) ), GRB.MINIMIZE)
 
  
     #for j in range(0,J):
@@ -50,12 +49,14 @@ try:
             for n in range(N):
                 m.addConstr(c[j,t,n] <= w[j,t,n])
 
-    w[j,t,n].start=100
+    w[0,0,0].start=10
+    w[1,0,0].start=10
     # Optimize model
     m.optimize()
 
     for v in m.getVars():
-        print('%s %g' % (v.varName, v.x))
+        if v.x>0:
+            print('%s %g' % (v.varName, v.x))
 
     print('Obj: %g' % m.objVal)
 
