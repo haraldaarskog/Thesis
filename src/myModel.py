@@ -9,19 +9,24 @@ T=2
 N=10
 R=3
 
-J_r=1
+B_jn=np.matrix([
+        [1,2,3,4,5,6,7,8,9,10],
+        [1,2,3,4,5,6,7,8,9,10]])
 
-B_jn=np.matrix([[1,2,3,4,5,6,7,8,9,10],[1,2,3,4,5,6,7,8,9,10]])
+Q_ij=np.matrix([
+        [1,1],
+        [1,1]])
 
-Q_ij=np.matrix([[1,1],[1,1]])
-
-delta_jt=np.matrix([[5,5],[5,5]])
+delta_jt=np.matrix([
+        [1,1],
+        [1,1]])
 
 try:
 
     # Create a new model
     m = gp.Model("mip1")
     #m.setParam('TimeLimit', 60)
+    
     # Create variables
     z = m.addVar(vtype=GRB.BINARY, name="z")
     w = m.addVars(J,T,N,name="w")
@@ -37,7 +42,7 @@ try:
         
     for j in range(J):
         for t in range(T):          
-            m.addConstr(w[j,t,0]==delta_jt[j,t]+sum(c[i,t,n]*Q_ij[i,j] for i in range(J)))
+            m.addConstr(w[j,t,0]==delta_jt[j,t]+sum(c[i,t,n]*Q_ij[i,j] for i in range(J) for n in range(N)))
 
     for j in range(J):
         for t in range(1,T):
@@ -49,8 +54,8 @@ try:
             for n in range(N):
                 m.addConstr(c[j,t,n] <= w[j,t,n])
 
-    w[0,0,0].start=10
-    w[1,0,0].start=10
+    #w[0,0,0].start=10
+    #w[1,0,0].start=10
     # Optimize model
     m.optimize()
 
