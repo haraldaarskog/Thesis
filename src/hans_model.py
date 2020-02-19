@@ -5,7 +5,7 @@ import numpy as np
 
 #Set sizes
 J=2
-T=5
+T=3
 N=10
 R=3
 
@@ -18,8 +18,8 @@ Q_ij=np.matrix([
         [0,0]])
 
 delta_jt=np.matrix([
-        [8,2,2,2,2,2,2,2,2,2],
-        [2,1,2,2,2,2,2,2,2,2]])
+        [2,8,2,2,2,2,2,2,2,2],
+        [2,2,2,2,2,2,2,2,2,2]])
 
 try:
 
@@ -39,8 +39,11 @@ try:
 
     #CONSTRAINT 2 IN HANS
     for j in range(J):
-        for t in range(T):
-            m.addConstr(w[j,t,0]==delta_jt[j,t]+gp.quicksum(c[i,t,n]*Q_ij[i,j] for i in range(J) for n in range(N)))
+        for t in range(0,T):
+            if t==0:
+                m.addConstr(w[j,t,0]==delta_jt[j,t]+gp.quicksum(c[i,t,n]*Q_ij[i,j] for i in range(J) for n in range(N)))
+            else:
+                m.addConstr(w[j,t,0]==delta_jt[j,t]+gp.quicksum(c[i,t-1,n]*Q_ij[i,j] for i in range(J) for n in range(N)))
 
     #CONSTRAINT 3 IN HANS
     for j in range(J):
