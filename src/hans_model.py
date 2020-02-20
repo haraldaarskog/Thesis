@@ -5,7 +5,7 @@ import numpy as np
 
 #Set sizes
 J=2
-T=3
+T=2
 N=10
 R=3
 
@@ -18,8 +18,16 @@ Q_ij=np.matrix([
         [0,0]])
 
 delta_jt=np.matrix([
-        [2,8,2,2,2,2,2,2,2,2],
+        [2,2,2,2,2,2,2,2,2,2],
         [2,2,2,2,2,2,2,2,2,2]])
+
+S_jr=np.matrix([
+        [0,1],
+        [0,0]])
+
+D_jn=np.matrix([
+        [0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0]])
 
 try:
 
@@ -62,15 +70,26 @@ try:
             for n in range(N):
                 m.addConstr(c[j,t,n] <= 2)
 
-    #Start values
-    #w[0,0,0].start=10
-    #w[1,0,0].start=10
+
+    for j in range(J):
+        for n in range(1,N):
+            m.addConstr(w[j,0,n] == D_jn[j,n])
+
+
     # Optimize model
     m.optimize()
-
+    
+    matr=np.zeros((J,N))
+    
     for v in m.getVars():
         if v.x>0:
             print('%s %g' % (v.varName, v.x))
+            queue=int(v.varName[2])
+            time=int(v.varName[4])
+            n_periods=int(v.varName[6])
+            if time==T-1:
+                matr[queue,n_periods]=v.x
+    print(matr)            
     print('Obj: %g' % m.objVal)
 
 except gp.GurobiError as e:
