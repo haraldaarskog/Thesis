@@ -2,32 +2,39 @@ import gurobipy as gp
 from gurobipy import GRB
 import numpy as np
 import model_functions
-import param
+import model_parameters
 
 #Set sizes
-J=2
+G=2
+J=int(model_parameters.number_of_queues(G))
 T=D=2
 N=10
 R=3
 
-W_jn=param.W_jn
-Q_ij=param.Q_ij
-D_jt=param.D_jt
-B_jr=param.B_jr
-E_jn=param.E_jn
-M_ij=param.M_ij
+print("Running model with",J,"queues")
 
-C_sol,Q_sol=model_functions.loadSolution(J,T,N, "/Users/haraldaarskog/GoogleDrive/Masteroppgave/Git/Thesis/src/output/model_solution.sol")
+#Loading parameters
+W_jn=model_parameters.W_jn
+Q_ij=model_parameters.Q_ij
+D_jt=model_parameters.D_jt
+B_jr=model_parameters.B_jr
+E_jn=model_parameters.E_jn
+M_ij=model_parameters.M_ij
 
-patient_processes=np.matrix([
-        [1,0,0,1,0,1],
-        [1,1,1,0,0,1]])
 
-number_of_queues=patient_processes.sum()
+#Loading variables from previous solution
+
+#Haralds mac
+#C_sol,Q_sol=model_functions.loadSolution(J,T,N, "/Users/haraldaarskog/GoogleDrive/Masteroppgave/Git/Thesis/src/output/model_solution.sol")
+
+#Haralds skole-pc
+#C_sol,Q_sol=model_functions.loadSolution(J,T,N, "C:/Users/hara/Code/Thesis/src/output/model_solution.sol")
+
+
 try:
 
     # Model setup
-    m = gp.Model("mip_model")
+    m = gp.Model("mip_queue_model")
     #m.setParam('TimeLimit', 60)
 
     # Variables
@@ -39,30 +46,30 @@ try:
 
     # Constraints
 
-    #CONSTRAINT 2 IN HANS
+    #CONSTRAINT 2 IN HANS - updating the following queue when patients are being serviced
     for j in range(J):
         for t in range(0,T):
             if t==0:
-                m.addConstr(q[j,t,0]==D_jt[j,t]+gp.quicksum(C_sol[i,t,n]*Q_ij[i,j] for i in range(J) for n in range(N)))
+                m.addConstr(q[j,t,0]==D_jt[j,t])
             else:
                 m.addConstr(q[j,t,0]==D_jt[j,t]+gp.quicksum(c[i,t-M_ij[i,j],n]*Q_ij[i,j] for i in range(J) for n in range(N)))
 
-    #CONSTRAINT 3 IN HANS
+    #CONSTRAINT 3 IN HANS - Updating a queue when patients are serviced
     for j in range(J):
         for t in range(1,T):
             for n in range(1,N):
                 m.addConstr(q[j,t,n] == q[j,t-1,n-1] - c[j,t-1,n-1])
 
-    #CONSTRAINT 4 IN HANS
+    #CONSTRAINT 4 IN HANS - cannot service more patients than there are patients in the queue
     for j in range(J):
         for t in range(T):
             for n in range(N):
                 m.addConstr(c[j,t,n] <= q[j,t,n])
-    #CONSTRAINT egendefinert
+                
+    #CONSTRAINT egendefinert, capper antall behandlinger
     for j in range(J):
         for t in range(T):
-            for n in range(N):
-                m.addConstr(c[j,t,n] <= 2)
+            m.addConstr(gp.quicksum(c[j,t,n] for n in range(N)) <= 2)
 
 
     for j in range(J):
@@ -83,5 +90,12 @@ except gp.GurobiError as e:
 except AttributeError:
     print('Encountered an attribute error')
 
-m.write("/Users/haraldaarskog/GoogleDrive/Masteroppgave/Git/Thesis/src/output/model.lp")
-m.write("/Users/haraldaarskog/GoogleDrive/Masteroppgave/Git/Thesis/src/output/model_solution.sol")
+
+#Haralds mac
+#m.write("/Users/haraldaarskog/GoogleDrive/Masteroppgave/Git/Thesis/src/output/model.lp")
+#m.write("/Users/haraldaarskog/GoogleDrive/Masteroppgave/Git/Thesis/src/output/model_solution.sol")
+
+#Haralds skole-pc
+m.write("C:/Users/hara/Code/Thesis/src/output/model.lp")
+m.write("C:/Users/hara/Code/Thesis/src/output/model_solution.sol")
+

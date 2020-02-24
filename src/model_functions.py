@@ -37,3 +37,14 @@ def loadSolution(J,T,N, file_name):
         else:
             continue
     return c_matrix, q_matrix
+
+def queue_to_pathway(queue_number,matrix):
+    counter=-1
+    for i in range(matrix.shape[0]):
+        for j in range(matrix.shape[1]):
+            if matrix[i,j]==1:
+                counter+=1
+                if counter==queue_number:
+                    return i
+    raise ValueError("Something wrong happened")
+    
