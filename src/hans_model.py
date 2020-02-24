@@ -29,6 +29,11 @@ D_jn=np.matrix([
         [0,0,0,0,0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0,0,0,0,0]])
 
+patient_processes=np.matrix([
+        [1,0,0,1,0,1],
+        [1,1,1,0,0,1]])
+
+number_of_queues=patient_processes.sum()
 try:
 
     # Model setup
