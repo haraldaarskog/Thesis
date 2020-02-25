@@ -21,7 +21,7 @@ G = nx.DiGraph()
 
 
 
-A = np.array([[1,0,1], 
+A = np.array([[1,0,1],
               [1,0,1]])
 
 res=[]

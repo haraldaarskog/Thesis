@@ -65,7 +65,7 @@ try:
         for t in range(T):
             for n in range(N):
                 m.addConstr(c[j,t,n] <= q[j,t,n])
-                
+
     #CONSTRAINT egendefinert, capper antall behandlinger
     for j in range(J):
         for t in range(T):
@@ -98,4 +98,3 @@ except AttributeError:
 #Haralds skole-pc
 m.write("C:/Users/hara/Code/Thesis/src/output/model.lp")
 m.write("C:/Users/hara/Code/Thesis/src/output/model_solution.sol")
-
