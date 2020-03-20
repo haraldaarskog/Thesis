@@ -7,33 +7,46 @@ from prettytable import PrettyTable
 from termcolor import colored, cprint
 import sys
 
+#TODO: Lage en funksjon som gjør at vi kan kjøre uavhengige runs og avhengige runs
+
+
+
 #Set sizes
-G=1
-J=int(model_parameters.number_of_queues(G))
-T=10
+G=2
+J=int(model_functions.number_of_queues(G))
+T=5
 N=10
 M=10
+A=model_functions.patient_processes.shape[1]
 R=2
-A=5
 
 
-t = PrettyTable(['Patient processes', 'Queues','Time periods','N','M','Resources'])
-t.add_row([G,J,T,N,M,R])
-print("\n\n")
+t = PrettyTable(['Queues','Time periods','N','M','Patient processes','Activities','Resources'])
+t.add_row([J,T,N,M,G,A,R])
 print(t)
 
+model_functions.all_print_patient_processes(G)
+
+#Number of days since the model was updated the last time
+shift=1
 
 #Loading parameters
 W_jn=model_parameters.W_jn
 Q_ij=model_parameters.Q_ij
 D_jt=model_parameters.D_jt
-E_jnm=model_parameters.E_jnm
 M_ij=model_parameters.M_ij
 H_jr=model_parameters.H_jr
 L_tr=model_parameters.L_tr
 F_ga=model_parameters.F_ga
-A_jt=model_functions.old_solution("output/model_solution.sol",1)
+K=100
 
+#E_jnm=model_functions.old_solution("output/model_solution.sol","q",0)[:,-1,:,:]
+E_jnm=model_functions.create_empty_initial_queue(J,N,M)
+A_jt=model_functions.old_solution("output/model_solution.sol","b",shift)
+#A_jt=np.array([
+#    [2, 2, 1, 0, 0, 0, 0, 0, 0],
+#    [0, 2, 2, 2, 2, 2, 0, 0, 0],
+#    [0, 0, 2, 2, 2, 2, 2, 0, 0]])
 
 try:
 
@@ -46,6 +59,8 @@ try:
     q_dict={}
     b_dict={}
     x_dict={}
+    u_A_dict={}
+    u_B_dict={}
     for j in range(J):
         for t in range(T):
             for n in range(N):
@@ -61,6 +76,8 @@ try:
     for j in range(J):
         for t in range(T):
             b_dict[j,t]=model.addVar(name="b("+str(j)+","+str(t)+")")
+            u_A_dict[j,t]=model.addVar(name="u_A("+str(j)+","+str(t)+")")
+            u_B_dict[j,t]=model.addVar(name="u_B("+str(j)+","+str(t)+")")
 
     for t in range(T):
         for m in range(M):
@@ -95,7 +112,11 @@ try:
                 #Setter resten lik 0 ved t=0. Må endres på når
                 elif t==0:
                     for n in range(N):
-                        model.addConstr(q_dict[j,t,n,m]==0)
+                        if E_jnm[j,n,m]>0:
+                            #model.addConstr(q_dict[j,t,n,m]==E_jnm[j,n,m])
+                            model.addConstr(q_dict[j,t,n,m]==0)
+                        else:
+                            model.addConstr(q_dict[j,t,n,m]==0)
                 elif t>=1:
                     model.addConstr(q_dict[j,t,0,m]==gp.quicksum(c_dict[i,t-M_ij[i,j],n,m]*Q_ij[i,j] for i in range(J) for n in range(N)))
 
@@ -129,7 +150,7 @@ try:
 
     for g in range(G):
         for a in range(A):
-            j=model_parameters.find_queue(g,a)
+            j=model_functions.find_queue(g,a)
             if j==-1:
                 continue
             for m in range(M):
@@ -152,11 +173,21 @@ try:
     for t in range(T):
         for g in range(G):
             for a in range(A):
-                j=model_parameters.find_queue(g,a)
+                j=model_functions.find_queue(g,a)
                 for m in range(M):
                     if m>F_ga[g,a]:
                         for n in range(N):
-                            model.addConstr(q_dict[j,t,n,m]<=0)
+                            #model.addConstr(q_dict[j,t,n,m]<=0)
+                            pass
+    for j in range(J):
+        for t in range(T-shift):
+            #model.addConstr(u_A_dict[j,t]-u_B_dict[j,t]==b_dict[j,t]-A_jt[j,t])
+            pass
+
+
+    model.addConstr(gp.quicksum(u_A_dict[j,t] for j in range(J) for t in range(T))<=K)
+    model.addConstr(gp.quicksum(u_B_dict[j,t] for j in range(J) for t in range(T))<=K)
+
 
 
 
@@ -165,7 +196,8 @@ try:
     model.optimize()
     status=model.status
     if status==2:
-        print(colored("Found feasible solution", 'green',attrs=['bold']))
+        runtime=model.Runtime
+        print(colored("Found optimal solution in %g seconds (%g minutes)" % (runtime,(runtime/60)), 'green',attrs=['bold']))
     elif status==3:
         print(colored("Model is infeasible", 'red',attrs=['bold']))
         sys.exit()
@@ -190,6 +222,12 @@ model_functions.variable_printer("b",b_dict)
 print("\n")
 print(colored("x(t, m, g, a)", 'green',attrs=['underline']))
 model_functions.variable_printer("x",x_dict)
+print("\n")
+print(colored("u_A(j,t)", 'green',attrs=['underline']))
+model_functions.variable_printer("u_A",u_A_dict)
+print("\n")
+print(colored("u_B(j,t)", 'green',attrs=['underline']))
+model_functions.variable_printer("u_B", u_B_dict)
 
 
 #Haralds mac

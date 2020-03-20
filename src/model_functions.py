@@ -2,18 +2,31 @@ import numpy as np
 import gurobipy as gp
 from prettytable import PrettyTable
 import pandas as pd
+import model_parameters
 
-def createParameter(variables, J,T,N):
-    matr=np.zeros((J,N))
-    for v in variables:
-        if v.x > 0:
-            queue=int(v.varName[2])
-            time_period=int(v.varName[4])
-            n_periods=int(v.varName[6])
-            if time_period==T-1:
-                matr[queue,n_periods]=v.x
-    return matr
+patient_processes=model_parameters.patient_processes
+activity_dict=model_parameters.activity_dict
 
+def number_of_queues(number_of_patient_processes):
+    if number_of_patient_processes>patient_processes.shape[0]:
+        raise ValueError("There are not defined that much patient processes.")
+    sum=0
+    for i in range(number_of_patient_processes):
+        sum+=patient_processes[i][:].sum()
+    return sum
+
+def find_queue(patient_pro,activity):
+    if patient_processes[patient_pro, activity]==0:
+        return -1
+    rows,cols=patient_processes.shape
+    sum=-1
+    for p in range(rows):
+        for a in range(cols):
+            if patient_processes[p,a]==1:
+                sum+=1
+            if patient_pro==p and activity == a:
+                return sum
+    return None
 
 def variable_printer(var_name,dict):
     for key in dict:
@@ -60,25 +73,55 @@ def shift_solution(d, shift):
 def find_max_of_dict(d):
     arr1=[]
     arr2=[]
+    flag=True
     for key in d:
-        arr1.append(key[0])#j
-        arr2.append(key[1])#t
-    return max(arr1), max(arr2)
+        if flag:
+            key_len=len(key)
+            arr=np.zeros(key_len)
+            flag=False
+        for i in range(key_len):
+            value=int(key[i])
+            if value>arr[i]:
+                arr[i]=value
+    return arr.astype(int)+1
 
 def from_dict_to_matrix(d):
-    j,t=find_max_of_dict(d)
-    mat=np.zeros((j+1,t+1))
+    dim=tuple(find_max_of_dict(d))
+    array=np.zeros(dim)
     for key in d:
-        mat[key[0],key[1]]=d[key]
-    return mat
+        array[key]=d[key]
+    return array
 
 
+def old_solution(file, variable, shift):
+    d=loadSolution(file)[variable]
+    if shift > 0:
+        d=shift_solution(d,shift)
+    array=from_dict_to_matrix(d)
+    return array
 
 
-def old_solution(file, shift):
-    b_dict=loadSolution(file)["b"]
-    b_dict_shifted=shift_solution(b_dict,shift)
-    b_matrix=from_dict_to_matrix(b_dict_shifted)
-    return b_matrix
+def print_patient_process(g):
+    path=patient_processes[g][:]
+    str=""
+    for i in range(len(path)):
+        if path[i]==1:
+            str+=activity_dict[i]+" -> "
+    print(str[:-4])
 
-#print(old_solution("output/model_solution.sol"))
+def all_print_patient_processes(G):
+    print("Patient processes:")
+    for g in range(G):
+        print(str(g)+":",end=" ")
+        print_patient_process(g)
+
+
+def update_queue(j,n,m, number_of_patients, queue):
+    queue[j,n,m]=number_of_patients
+
+def delete_all_queue_entries(queue):
+    queue_dim=queue.shape
+    return np.zeros(queue_dim)
+
+def create_empty_initial_queue(j,n,m):
+    return np.zeros((j,n,m))
