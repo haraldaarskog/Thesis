@@ -3,98 +3,195 @@ from gurobipy import GRB
 import numpy as np
 import model_functions
 import model_parameters
+from prettytable import PrettyTable
+from termcolor import colored, cprint
+import sys
 
 #Set sizes
-G=2
+G=1
 J=int(model_parameters.number_of_queues(G))
-T=D=2
+T=10
 N=10
-R=3
+M=10
+R=2
+A=5
 
-print("Running model with",J,"queues")
+
+t = PrettyTable(['Patient processes', 'Queues','Time periods','N','M','Resources'])
+t.add_row([G,J,T,N,M,R])
+print("\n\n")
+print(t)
+
 
 #Loading parameters
 W_jn=model_parameters.W_jn
 Q_ij=model_parameters.Q_ij
 D_jt=model_parameters.D_jt
-B_jr=model_parameters.B_jr
-E_jn=model_parameters.E_jn
+E_jnm=model_parameters.E_jnm
 M_ij=model_parameters.M_ij
-
-
-#Loading variables from previous solution
-
-#Haralds mac
-#C_sol,Q_sol=model_functions.loadSolution(J,T,N, "/Users/haraldaarskog/GoogleDrive/Masteroppgave/Git/Thesis/src/output/model_solution.sol")
-
-#Haralds skole-pc
-#C_sol,Q_sol=model_functions.loadSolution(J,T,N, "C:/Users/hara/Code/Thesis/src/output/model_solution.sol")
+H_jr=model_parameters.H_jr
+L_tr=model_parameters.L_tr
+F_ga=model_parameters.F_ga
+A_jt=model_functions.old_solution("output/model_solution.sol",1)
 
 
 try:
 
-    # Model setup
-    m = gp.Model("mip_queue_model")
-    #m.setParam('TimeLimit', 60)
+    #******************** Model setup ********************
+    model = gp.Model("mip_queue_model")
+    model.setParam("OutputFlag",0)
 
-    # Variables
-    q = m.addVars(J,T,N,name="q")
-    c = m.addVars(J,T,N, vtype=GRB.INTEGER, name="c")
+    #******************** Variables ********************
+    c_dict={}
+    q_dict={}
+    b_dict={}
+    x_dict={}
+    for j in range(J):
+        for t in range(T):
+            for n in range(N):
+                for m in range(M):
+                    if m>=n:
+                        c_dict[j,t,n,m]=model.addVar(name="c("+str(j)+","+str(t)+","+str(n)+","+str(m)+")")
+                        q_dict[j,t,n,m]=model.addVar(name="q("+str(j)+","+str(t)+","+str(n)+","+str(m)+")")
+                    else:
+                        q_dict[j,t,n,m]=0
+                        c_dict[j,t,n,m]=0
 
-    # Objective function
-    m.setObjective(gp.quicksum(q[j,t,n]*W_jn[j,n] for j in range(J) for t in range (T) for n in range(N) ), GRB.MINIMIZE)
 
-    # Constraints
+    for j in range(J):
+        for t in range(T):
+            b_dict[j,t]=model.addVar(name="b("+str(j)+","+str(t)+")")
+
+    for t in range(T):
+        for m in range(M):
+            for g in range(G):
+                for a in range(A):
+                    x_dict[t,m,g,a]=model.addVar(name="x("+str(t)+","+str(m)+","+str(g)+","+str(a)+")",vtype=GRB.BINARY)
+
+
+
+
+
+
+    #******************** Objective function ********************
+    model.setObjective(gp.quicksum(W_jn[j,n]*q_dict[j,t,n,m] for j in range(J) for t in range(T) for n in range(N) for m in range(M)), GRB.MINIMIZE)
+
+
+    #******************** Constraints ********************
 
     #CONSTRAINT 2 IN HANS - updating the following queue when patients are being serviced
     for j in range(J):
-        for t in range(0,T):
-            if t==0:
-                m.addConstr(q[j,t,0]==D_jt[j,t])
-            else:
-                m.addConstr(q[j,t,0]==D_jt[j,t]+gp.quicksum(c[i,t-M_ij[i,j],n]*Q_ij[i,j] for i in range(J) for n in range(N)))
+        for t in range(T):
+            for m in range(M):
+                # må ta hensyn til q[1,1,0,0]
+                if m==0:
+                    if t==0:
+                        #Når m==0, legger til nyinkommende pasienter og sørger for at n,m=0
+                        model.addConstr(q_dict[j,t,0,0]==D_jt[j,t])
+                    else:
+                        model.addConstr(q_dict[j,t,0,0]==D_jt[j,t]+gp.quicksum(c_dict[i,t-M_ij[i,j],0,0]*Q_ij[i,j] for i in range(J)))
+
+                #Ikke interessant å se på t==0, siden m==0 håndterer innkommende psienter på denne dagen.
+                #Setter resten lik 0 ved t=0. Må endres på når
+                elif t==0:
+                    for n in range(N):
+                        model.addConstr(q_dict[j,t,n,m]==0)
+                elif t>=1:
+                    model.addConstr(q_dict[j,t,0,m]==gp.quicksum(c_dict[i,t-M_ij[i,j],n,m]*Q_ij[i,j] for i in range(J) for n in range(N)))
+
 
     #CONSTRAINT 3 IN HANS - Updating a queue when patients are serviced
     for j in range(J):
         for t in range(1,T):
             for n in range(1,N):
-                m.addConstr(q[j,t,n] == q[j,t-1,n-1] - c[j,t-1,n-1])
+                for m in range(1,M):
+                    model.addConstr(q_dict[j,t,n,m] == q_dict[j,t-1,n-1,m-1] - c_dict[j,t-1,n-1,m-1])
+
+
 
     #CONSTRAINT 4 IN HANS - cannot service more patients than there are patients in the queue
     for j in range(J):
         for t in range(T):
             for n in range(N):
-                m.addConstr(c[j,t,n] <= q[j,t,n])
+                for m in range(M):
+                    model.addConstr(c_dict[j,t,n,m] <= q_dict[j,t,n,m])
+
+
+    for j in range(J):
+        for t in range(T):
+            model.addConstr(b_dict[j,t]==gp.quicksum(c_dict[j,t,n,m] for n in range(N) for m in range(M)))
 
     #CONSTRAINT egendefinert, capper antall behandlinger
     for j in range(J):
         for t in range(T):
-            m.addConstr(gp.quicksum(c[j,t,n] for n in range(N)) <= 2)
+            model.addConstr(gp.quicksum(c_dict[j,t,n,m] for n in range(N) for m in range(M)) <= 2)
 
 
-    for j in range(J):
-        for n in range(1,N):
-            m.addConstr(q[j,0,n] == E_jn[j,n])
+    for g in range(G):
+        for a in range(A):
+            j=model_parameters.find_queue(g,a)
+            if j==-1:
+                continue
+            for m in range(M):
+                for t in range(T):
+                    model.addConstr(x_dict[t,m,g,a]<=gp.quicksum(c_dict[j,t,n,m] for n in range(N)))
+                    model.addConstr(10000*x_dict[t,m,g,a]>=gp.quicksum(c_dict[j,t,n,m] for n in range(N)))
+
+    for t in range(T):
+        for r in range(R):
+            #model.addConstr(gp.quicksum(H_jr[j,r]*b_dict[j,t] for j in range(J)) <= L_tr[t,r])
+            pass
+
+    for t in range(T):
+        for m in range(M):
+            for g in range(G):
+                for a in range(A):
+                    #model.addConstr(m*x_dict[t,m,g,a]<=F_ga[g,a])
+                    pass
+
+    for t in range(T):
+        for g in range(G):
+            for a in range(A):
+                j=model_parameters.find_queue(g,a)
+                for m in range(M):
+                    if m>F_ga[g,a]:
+                        for n in range(N):
+                            model.addConstr(q_dict[j,t,n,m]<=0)
 
 
-    # Optimize model
-    m.optimize()
-    for v in m.getVars():
-        if v.x>0:
-            print('%s %g' % (v.varName, v.x))
-    print('Obj: %g' % m.objVal)
 
+    #******************** Optimize model ********************
+    print("\n")
+    model.optimize()
+    status=model.status
+    if status==2:
+        print(colored("Found feasible solution", 'green',attrs=['bold']))
+    elif status==3:
+        print(colored("Model is infeasible", 'red',attrs=['bold']))
+        sys.exit()
+    else:
+        print(colored("Check gurobi status codes", 'red',attrs=['bold']))
+        sys.exit()
+    print(colored('Objective value: %g' % model.objVal, 'magenta',attrs=['bold']))
+    print("\n")
 except gp.GurobiError as e:
     print('Error code ' + str(e.errno) + ': ' + str(e))
 
-except AttributeError:
-    print('Encountered an attribute error')
+
+
+print(colored("q(j, t, n, m)", 'green',attrs=['underline']))
+model_functions.variable_printer("q", q_dict)
+print("\n")
+print(colored("c(j, t, n, m)", 'green',attrs=['underline']))
+model_functions.variable_printer("c",c_dict)
+print("\n")
+print(colored("b(j, t)", 'green',attrs=['underline']))
+model_functions.variable_printer("b",b_dict)
+print("\n")
+print(colored("x(t, m, g, a)", 'green',attrs=['underline']))
+model_functions.variable_printer("x",x_dict)
 
 
 #Haralds mac
-#m.write("/Users/haraldaarskog/GoogleDrive/Masteroppgave/Git/Thesis/src/output/model.lp")
-#m.write("/Users/haraldaarskog/GoogleDrive/Masteroppgave/Git/Thesis/src/output/model_solution.sol")
-
-#Haralds skole-pc
-m.write("C:/Users/hara/Code/Thesis/src/output/model.lp")
-m.write("C:/Users/hara/Code/Thesis/src/output/model_solution.sol")
+model.write("/Users/haraldaarskog/GoogleDrive/Masteroppgave/Git/Thesis/src/output/model.lp")
+model.write("/Users/haraldaarskog/GoogleDrive/Masteroppgave/Git/Thesis/src/output/model_solution.sol")

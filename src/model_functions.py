@@ -1,10 +1,7 @@
 import numpy as np
-
-
-J=2
-T=D=2
-N=10
-R=3
+import gurobipy as gp
+from prettytable import PrettyTable
+import pandas as pd
 
 def createParameter(variables, J,T,N):
     matr=np.zeros((J,N))
@@ -17,34 +14,71 @@ def createParameter(variables, J,T,N):
                 matr[queue,n_periods]=v.x
     return matr
 
-def loadSolution(J,T,N, file_name):
-    c_matrix=np.zeros((J,T,N))
-    q_matrix=np.zeros((J,T,N))
+
+def variable_printer(var_name,dict):
+    for key in dict:
+        value=dict[key]
+        if isinstance(value, gp.Var):
+            value=value.x
+        if value>0:
+            print('%s%s = %3.2f' % (var_name,key, value))
+
+#returns 2dim dict. very nice
+def loadSolution(file_name):
+    set_of_variables=set()
     file = open(file_name, "r")
+    res_dict={}
+    d={}
     for line in file:
         if line[0]=="#":
             continue
-        line=line[0:-1]
         variable=line[0]
-        queue=int(line[2])
-        time_period=int(line[4])
-        n_periods=int(line[6])
-        variable_value=line[-1]
-        if variable == "c":
-            c_matrix[queue,time_period,n_periods]=variable_value
-        elif variable == "q":
-            q_matrix[queue,time_period,n_periods]=variable_value
-        else:
-            continue
-    return c_matrix, q_matrix
+        value=int(line[-2])
+        if variable not in set_of_variables:
+            set_of_variables.add(variable)
+            res_dict[variable]={}
+        end=line.find(")")
+        arr=[]
+        for i in range(end):
+            if line[i].isdigit():
+                arr.append(int(line[i]))
+        res_dict[variable][tuple(arr)]=value
+    return res_dict
 
-def queue_to_pathway(queue_number,matrix):
-    counter=-1
-    for i in range(matrix.shape[0]):
-        for j in range(matrix.shape[1]):
-            if matrix[i,j]==1:
-                counter+=1
-                if counter==queue_number:
-                    return i
-    raise ValueError("Something wrong happened")
-    
+
+def shift_solution(d, shift):
+    d_new={}
+    for key in d:
+        j=key[0]
+        old_t=key[1]
+        if old_t>=shift:
+            new_t=old_t-shift
+            d_new[(j,new_t)] = d[key]
+    return d_new
+
+
+def find_max_of_dict(d):
+    arr1=[]
+    arr2=[]
+    for key in d:
+        arr1.append(key[0])#j
+        arr2.append(key[1])#t
+    return max(arr1), max(arr2)
+
+def from_dict_to_matrix(d):
+    j,t=find_max_of_dict(d)
+    mat=np.zeros((j+1,t+1))
+    for key in d:
+        mat[key[0],key[1]]=d[key]
+    return mat
+
+
+
+
+def old_solution(file, shift):
+    b_dict=loadSolution(file)["b"]
+    b_dict_shifted=shift_solution(b_dict,shift)
+    b_matrix=from_dict_to_matrix(b_dict_shifted)
+    return b_matrix
+
+#print(old_solution("output/model_solution.sol"))
