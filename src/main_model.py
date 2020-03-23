@@ -10,7 +10,6 @@ import sys
 #TODO: Lage en funksjon som gjør at vi kan kjøre uavhengige runs og avhengige runs
 
 
-
 #Set sizes
 G=2
 J=int(model_functions.number_of_queues(G))

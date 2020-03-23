@@ -136,7 +136,6 @@ M_ij=np.matrix([
         [1,1,1,1,1,1,1,1,1,1],
         [1,1,1,1,1,1,1,1,1,1]])
 
-
 #Fractions of patients moving from queue i to queue j
 Q_ij=np.matrix([
         [0,1,0,0,0,0,0,0,0,0],
@@ -149,7 +148,6 @@ Q_ij=np.matrix([
         [0,0,0,0,0,0,0,0,1,0],
         [0,0,0,0,0,0,0,0,0,1],
         [0,0,0,0,0,0,0,0,0,0]])
-
 
 patient_processes=np.array([
         [1,1,1,0,1,1],
