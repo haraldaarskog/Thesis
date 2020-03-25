@@ -3,6 +3,8 @@ import gurobipy as gp
 from prettytable import PrettyTable
 import pandas as pd
 import model_parameters
+from datetime import datetime
+import re
 
 patient_processes=model_parameters.patient_processes
 activity_dict=model_parameters.activity_dict
@@ -36,7 +38,7 @@ def variable_printer(var_name,dict):
         if value>0:
             print('%s%s = %3.2f' % (var_name,key, value))
 
-#returns 2dim dict. very nice
+#returns dict. very nice
 def loadSolution(file_name):
     set_of_variables=set()
     file = open(file_name, "r")
@@ -46,16 +48,13 @@ def loadSolution(file_name):
         if line[0]=="#":
             continue
         variable=line[0]
-        value=int(line[-2])
+        arr=np.asarray(re.findall('\d+(?:\.\d+)?', line))
+        value=arr[-1].astype(float)
         if variable not in set_of_variables:
             set_of_variables.add(variable)
             res_dict[variable]={}
-        end=line.find(")")
-        arr=[]
-        for i in range(end):
-            if line[i].isdigit():
-                arr.append(int(line[i]))
-        res_dict[variable][tuple(arr)]=value
+        indices=arr[:-1].astype(int)
+        res_dict[variable][tuple(indices)]=value
     return res_dict
 
 
@@ -125,3 +124,49 @@ def delete_all_queue_entries(queue):
 
 def create_empty_initial_queue(j,n,m):
     return np.zeros((j,n,m))
+
+def create_normal_distribution(mean,std_deviation,n_samples):
+    #mean, std_deviation = 100, 10 # mean and standard deviation
+    s = np.random.normal(mean, std_deviation, n_samples)
+    return np.round(s)
+
+
+#Writing the r
+def write_to_file(J,T,N,M,G,A,R,obj_value,n_variables,n_constraints,runtime):
+    now = datetime.now()
+    dt_string = now.strftime("%d/%m %H:%M:%S")
+    date,time=dt_string.split(" ")
+    runtime=np.round(runtime,4)
+    df=pd.read_excel('run_data.xlsx', index_col=0)
+    flag=True
+    for index, row in df.iterrows():
+        J_row=row[0]
+        T_row=row[1]
+        N_row=row[2]
+        M_row=row[3]
+        G_row=row[4]
+        A_row=row[5]
+        R_row=row[6]
+        if J==J_row and T==T_row and N==N_row and M==M_row and G==G_row and A==A_row and R==R_row:
+            df.loc[index]=J,T,N,M,G,A,R,obj_value,n_variables,n_constraints,runtime,date,time
+            flag=False
+            break
+    if flag==True:
+        df.loc[len(df)]=[J,T,N,M,G,A,R,obj_value,n_variables,n_constraints,runtime,date,time]
+    df = df.sort_values(by=['Date','Time'],ascending=False)
+    df.to_excel('run_data.xlsx',index=True)
+
+def serviced_in_previous(J,T,N,M,shift,c_dict):
+    arr=np.zeros((J,T,N,M))
+    for i in range(J):
+        for j in range(J):
+            for t in range(T):
+                for n in range(N):
+                    for m in range(M):
+                        value=c_dict[i,t,n,m]
+                        delay=model_parameters.M_ij[i,j]
+                        if value>0 and model_parameters.Q_ij[i,j]==1 and (t+delay)>=shift:
+                            mod=(t+delay)%shift
+                            print("Hei",j,mod,n,m, value)
+                            arr[j,mod,n,m]=value
+    return arr

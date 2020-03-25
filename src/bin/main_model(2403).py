@@ -1,55 +1,55 @@
 import gurobipy as gp
 from gurobipy import GRB
 import numpy as np
-import model_functions as mf
-import model_parameters as mp
+import model_functions
+import model_parameters
 from prettytable import PrettyTable
 from termcolor import colored, cprint
 import sys
 import time
+import pandas as pd
 from datetime import datetime
 
 #TODO: Lage en funksjon som gjør at vi kan kjøre uavhengige runs og avhengige runs
 
 start_time=time.time()
+#Set sizes
+G=1
+J=int(model_functions.number_of_queues(G))
+T=5
+N=10
+M=10
+A=model_functions.patient_processes.shape[1]
+R=5
 
-def run_model(with_rolling_horizon, weeks):
-    #Set sizes
-    G=1
-    J=int(mf.number_of_queues(G))
-    T=3#7*weeks
-    N=10
-    M=10
-    A=mf.patient_processes.shape[1]
-    R=5
+def run_model(with_rolling_horizon):
 
     t = PrettyTable(['Queues','Time periods','N','M','Patient processes','Activities','Resources'])
     t.add_row([J,T,N,M,G,A,R])
     print(t)
 
-    mf.all_print_patient_processes(G)
+    model_functions.all_print_patient_processes(G)
 
     #Number of days since the model was updated the last time
     shift=1
 
     #Loading parameters
-    W_jn=mp.W_jn
-    Q_ij=mp.Q_ij
-    D_jt=mp.D_jt
-    M_ij=mp.M_ij
-    H_jr=mp.H_jr
-    L_tr=mp.L_rt
-    F_ga=mp.F_ga
+    W_jn=model_parameters.W_jn
+    Q_ij=model_parameters.Q_ij
+    D_jt=model_parameters.D_jt
+    M_ij=model_parameters.M_ij
+    H_jr=model_parameters.H_jr
+    L_tr=model_parameters.L_tr
+    F_ga=model_parameters.F_ga
     K=100
 
     if with_rolling_horizon==True:
-        E_jnm=mf.old_solution("output/model_solution.sol","q",0)[:,-1,:,:]
+        E_jnm=model_functions.old_solution("output/model_solution.sol","q",0)[:,-1,:,:]
         print(E_jnm)
-        A_jt=mf.old_solution("output/model_solution.sol","b",shift)
+        A_jt=model_functions.old_solution("output/model_solution.sol","b",shift)
     else:
-        E_jnm=mf.create_empty_initial_queue(J,N,M)
+        E_jnm=model_functions.create_empty_initial_queue(J,N,M)
         A_jt=np.zeros((J,T))
-
 
     end_time=time.time()
     print("Initialization took", end_time-start_time,"seconds")
@@ -104,14 +104,21 @@ def run_model(with_rolling_horizon, weeks):
         for j in range(J):
             for t in range(T):
                 for m in range(M):
+                    # må ta hensyn til q[1,1,0,0]
                     if m==0:
-                        model.addConstr(q_dict[j,t,0,0]==D_jt[j,t%7]+gp.quicksum(c_dict[i,t-M_ij[i,j],0,0]*Q_ij[i,j] for i in range(J) if (t-M_ij[i,j])>=0))
+                        model.addConstr(q_dict[j,t,0,0]==D_jt[j,t]+gp.quicksum(c_dict[i,t-M_ij[i,j],0,0]*Q_ij[i,j] for i in range(J) if (t-M_ij[i,j])>=0))
+                    #Setter resten lik 0 ved t=0. Må endres på når
                     elif t==0 and m>=1:
                         for n in range(N):
                             if n<=m:
+                            #if E_jnm[j,n,m]>0:
                                 model.addConstr(q_dict[j,t,n,m]==E_jnm[j,n,m])
-                    else:
-                        model.addConstr(q_dict[j,t,0,m]==gp.quicksum(c_dict[i,t-M_ij[i,j],n,m]*Q_ij[i,j] for i in range(J) for n in range(N) if (t-M_ij[i,j])>=0))
+                                #model.addConstr(q_dict[j,t,n,m]==0)
+                            #else:
+                                #model.addConstr(q_dict[j,t,n,m]==0)
+                                #pass
+                    elif t>=1:
+                        model.addConstr(q_dict[j,t,0,m]==gp.quicksum(c_dict[i,t-M_ij[i,j],n,m]*Q_ij[i,j] for i in range(J) for n in range(N)))
 
 
         #CONSTRAINT 3 IN HANS - Updating a queue when patients are serviced
@@ -119,8 +126,6 @@ def run_model(with_rolling_horizon, weeks):
             for t in range(1,T):
                 for n in range(1,N):
                     for m in range(1,M):
-                        #if j==0 and n==1 and m==1 and t ==1:
-                            #model.addConstr(q_dict[j,t,n,m]==3)
                         model.addConstr(q_dict[j,t,n,m] == q_dict[j,t-1,n-1,m-1] - c_dict[j,t-1,n-1,m-1])
 
 
@@ -146,7 +151,7 @@ def run_model(with_rolling_horizon, weeks):
         #TODO: Finn verdi for Big S
         for g in range(G):
             for a in range(A):
-                j=mf.find_queue(g,a)
+                j=model_functions.find_queue(g,a)
                 if j==-1:
                     continue
                 for m in range(M):
@@ -156,7 +161,7 @@ def run_model(with_rolling_horizon, weeks):
 
         for t in range(T):
             for r in range(R):
-                #model.addConstr(gp.quicksum(H_jr[j,r]*b_dict[j,t] for j in range(J)) <= L_rt[r,t%7])
+                #model.addConstr(gp.quicksum(H_jr[j,r]*b_dict[j,t] for j in range(J)) <= L_tr[t,r])
                 pass
 
         for t in range(T):
@@ -170,7 +175,7 @@ def run_model(with_rolling_horizon, weeks):
         for t in range(T):
             for g in range(G):
                 for a in range(A):
-                    j=mf.find_queue(g,a)
+                    j=model_functions.find_queue(g,a)
                     for m in range(M):
                         if m>F_ga[g,a]:
                             for n in range(N):
@@ -209,22 +214,22 @@ def run_model(with_rolling_horizon, weeks):
 
 
     print(colored("q(j, t, n, m)", 'green',attrs=['underline']))
-    mf.variable_printer("q", q_dict)
+    model_functions.variable_printer("q", q_dict)
     print("\n")
     print(colored("c(j, t, n, m)", 'green',attrs=['underline']))
-    mf.variable_printer("c",c_dict)
+    model_functions.variable_printer("c",c_dict)
     print("\n")
     print(colored("b(j, t)", 'green',attrs=['underline']))
-    mf.variable_printer("b",b_dict)
+    model_functions.variable_printer("b",b_dict)
     print("\n")
     print(colored("x(t, m, g, a)", 'green',attrs=['underline']))
-    mf.variable_printer("x",x_dict)
+    model_functions.variable_printer("x",x_dict)
     #print("\n")
     #print(colored("u_A(j,t)", 'green',attrs=['underline']))
-    #mf.variable_printer("u_A",u_A_dict)
+    #model_functions.variable_printer("u_A",u_A_dict)
     #print("\n")
     #print(colored("u_B(j,t)", 'green',attrs=['underline']))
-    #mf.variable_printer("u_B", u_B_dict)
+    #model_functions.variable_printer("u_B", u_B_dict)
 
 
     #Haralds mac
@@ -236,12 +241,7 @@ def run_model(with_rolling_horizon, weeks):
     number_of_constraints=len(constrs)
     vars=model.getVars()
     number_of_variables=len(vars)
-    mf.write_to_file(J,T,N,M,G,A,R,model.objVal,number_of_variables,number_of_constraints,runtime)
+    model_functions.write_to_file(J,T,N,M,G,A,R,number_of_variables,number_of_constraints,runtime)
 
 
-    c_jtnm_new=mf.old_solution("output/model_solution.sol","c",0)
-    a=mf.serviced_in_previous(J,T,N,M,T,c_jtnm_new)
-    print(a)
-
-
-run_model(False, 4)
+run_model(True)
