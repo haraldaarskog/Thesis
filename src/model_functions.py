@@ -2,12 +2,12 @@ import numpy as np
 import gurobipy as gp
 from prettytable import PrettyTable
 import pandas as pd
-import model_parameters
+import model_parameters as mp
 from datetime import datetime
 import re
 
-patient_processes=model_parameters.patient_processes
-activity_dict=model_parameters.activity_dict
+patient_processes=mp.patient_processes
+activity_dict=mp.activity_dict
 
 def number_of_queues(number_of_patient_processes):
     if number_of_patient_processes>patient_processes.shape[0]:
@@ -31,10 +31,16 @@ def find_queue(patient_pro,activity):
     return None
 
 def variable_printer(var_name,dict):
+
     for key in dict:
+
         value=dict[key]
-        if isinstance(value, gp.Var):
+        try:
             value=value.x
+        except Exception as e:
+            continue
+        #if isinstance(value, gp.Var):
+
         if value>0:
             print('%s%s = %3.2f' % (var_name,key, value))
 
@@ -132,7 +138,7 @@ def create_normal_distribution(mean,std_deviation,n_samples):
 
 
 #Writing the r
-def write_to_file(J,T,N,M,G,A,R,obj_value,n_variables,n_constraints,runtime):
+def write_to_file(J,T,N,M,G,A,R,obj_value,num_days_last_service,n_variables,n_constraints,runtime):
     now = datetime.now()
     dt_string = now.strftime("%d/%m %H:%M:%S")
     date,time=dt_string.split(" ")
@@ -148,11 +154,11 @@ def write_to_file(J,T,N,M,G,A,R,obj_value,n_variables,n_constraints,runtime):
         A_row=row[5]
         R_row=row[6]
         if J==J_row and T==T_row and N==N_row and M==M_row and G==G_row and A==A_row and R==R_row:
-            df.loc[index]=J,T,N,M,G,A,R,obj_value,n_variables,n_constraints,runtime,date,time
+            df.loc[index]=J,T,N,M,G,A,R,obj_value,num_days_last_service,n_variables,n_constraints,runtime,date,time
             flag=False
             break
     if flag==True:
-        df.loc[len(df)]=[J,T,N,M,G,A,R,obj_value,n_variables,n_constraints,runtime,date,time]
+        df.loc[len(df)]=[J,T,N,M,G,A,R,obj_value,num_days_last_service,n_variables,n_constraints,runtime,date,time]
     df = df.sort_values(by=['Date','Time'],ascending=False)
     df.to_excel('run_data.xlsx',index=True)
 
@@ -164,9 +170,87 @@ def serviced_in_previous(J,T,N,M,shift,c_dict):
                 for n in range(N):
                     for m in range(M):
                         value=c_dict[i,t,n,m]
-                        delay=model_parameters.M_ij[i,j]
-                        if value>0 and model_parameters.Q_ij[i,j]==1 and (t+delay)>=shift:
+                        delay=mp.M_ij[i,j]
+                        if value>0 and return_Q_ij(i,j)==1 and (t+delay)>=shift:
                             mod=(t+delay)%shift
-                            print("Hei",j,mod,n,m, value)
                             arr[j,mod,n,m]=value
     return arr
+
+
+
+
+def find_ga(queue,pp):
+    rows,cols=pp.shape
+    count=-1
+    for r in range(rows):
+        for c in range(cols):
+            if pp[r,c]==1:
+                count+=1
+            if count==queue:
+                return r,c
+
+
+def check_activity(a1,a2,g):
+    count1=0
+    count2=0
+    if a1>=a2:
+        return 0
+    for i in range(len(g)):
+        if g[i]==1:
+            count1+=1
+        if i==a1 and g[i]==1:
+            count2=count1
+        if i==a2 and count1==count2+1 and g[i]==1:
+            return 1
+
+    return 0
+
+def return_Q_ij(i,j):
+    pp=mp.patient_processes
+    g_i,a_i=find_ga(i,pp)
+    g_j,a_j=find_ga(j,pp)
+    if pp[g_i,a_i]==0 or pp[g_j,a_j]==0:
+        return 0
+    elif g_i!=g_j:
+        return 0
+    elif a_i>=a_j:
+        return 0
+    elif check_activity(a_i,a_j,pp[g_i]):
+        return 1
+    else:
+        return 0
+
+
+def is_last_queue(j):
+    sum1=-1
+    for row in mp.patient_processes:
+        sum1+=sum(row)
+        if j==sum1:
+            return True
+    return False
+
+def number_of_days_before_last_service(c_variable):
+    sum_m=0
+    sum_people=0
+    for key in c_variable:
+        value=c_variable[key]
+        try:
+            value=value.x
+        except Exception as e:
+            continue
+        queue=key[0]
+        if value>0 and is_last_queue(queue):
+            sum_m+=key[-1]*value
+            sum_people+=value
+    return sum_m,sum_people
+
+def calculate_stats(J,D_jt,E_jnm,G_jtnm):
+    #antall initielt i kø
+    sum_E=np.sum(E_jnm)
+    #antall behandlede som kommer over en periode
+    sum_G=np.sum(G_jtnm)
+    #antall i kø som ikke er blitt behandlet enda ved tid T
+    in_queue_last_time_period=np.sum(old_solution("output/model_solution.sol","q",0)[:,-1,:,:])
+    #Antall innkommende pasienter
+    sum_D=np.sum(D_jt[:J])
+    return sum_D,sum_E,sum_G,in_queue_last_time_period
