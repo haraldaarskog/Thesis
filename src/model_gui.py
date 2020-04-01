@@ -75,7 +75,7 @@ def create_gantt_chart(Queues, Time_periods, variable_dict):
 
 
 
-    plt.savefig("gantt1.png")
+    plt.savefig("figures/gantt_chart.png")
 
 b_jt=mf.loadSolution("output/model_solution.sol")["b"]
 #create_gantt_chart(3, 14, b_jt)
