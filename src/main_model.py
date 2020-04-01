@@ -8,13 +8,17 @@ from termcolor import colored, cprint
 import sys
 import time
 from datetime import datetime
+import model_gui as mg
 
 start_initialization_time = time.time()
-
+np.set_printoptions(suppress=True)
 
 #A function that runs the model
 #If with_rolling_horizon = True, input from the previous run is included
-def run_model(with_rolling_horizon, weeks):
+#If reset = True, input from previous run is deleted
+#shift: number of days between running the model the last time and today. The number
+#of days that are already implemented
+def run_model(weeks, shift, with_rolling_horizon, reset):
 
 
     #********************Set sizes********************
@@ -31,7 +35,7 @@ def run_model(with_rolling_horizon, weeks):
 
 
     #********************Information print********************
-    shift = 1
+
 
     t = BeautifulTable()
     t.column_headers=['Queues', 'Time periods', 'N', 'M', 'Patient processes', 'Activities', 'Resources']
@@ -50,14 +54,16 @@ def run_model(with_rolling_horizon, weeks):
     F_ga = mp.F_ga
     K = mp.K
 
+
+
     #if the model is executed with RH, the input from previous runs are included
-    if with_rolling_horizon == True:
-        E_jnm = mf.old_solution("output/model_solution.sol", "q", 0)[:, -1, :, :]
+    if with_rolling_horizon == True and reset == False:
         A_jt = mf.old_solution("output/model_solution.sol", "b", shift)
+        E_jnm = mf.old_solution("output/model_solution.sol", "q", 0)[:, shift-1, :, :]
         c_jtnm_old = mf.old_solution("output/model_solution.sol", "c", 0)
-        G_jtnm = mf.serviced_in_previous(Queues, Time_periods, N, M, Time_periods, c_jtnm_old)
+        G_jtnm = mf.serviced_in_previous(Queues, Time_periods, N, M, shift, c_jtnm_old)
     else:
-        E_jnm = mf.create_empty_initial_queue(Queues, N, M)
+        E_jnm = np.zeros((Queues, N, M))
         A_jt = np.zeros((Queues, Time_periods))
         G_jtnm = np.zeros((Queues, Time_periods, N, M))
 
@@ -78,6 +84,7 @@ def run_model(with_rolling_horizon, weeks):
         c_dict  =  model.addVars(Queues, Time_periods, N, M, vtype = GRB.INTEGER, lb = 0.0, ub = GRB.INFINITY, name = "c")
         q_dict  =  model.addVars(Queues, Time_periods, N, M, vtype = GRB.INTEGER, lb = 0.0, ub = GRB.INFINITY, name = "q")
         b_dict = model.addVars(Queues, Time_periods, vtype = GRB.INTEGER, lb = 0.0, ub = GRB.INFINITY, name = "b")
+        w_dict = model.addVars(Queues, Time_periods, vtype = GRB.INTEGER, lb = 0.0, ub = GRB.INFINITY, name = "w")
         x_dict = model.addVars(Time_periods, M, Patient_processes, Activities, vtype = GRB.BINARY, lb = 0.0, ub = GRB.INFINITY, name = "x")
         u_A_dict = model.addVars(Queues, Time_periods, vtype = GRB.CONTINUOUS, lb = 0.0, ub = GRB.INFINITY, name = "u_A")
         u_B_dict = model.addVars(Queues, Time_periods, vtype = GRB.CONTINUOUS, lb = 0.0, ub = GRB.INFINITY, name = "u_B")
@@ -89,7 +96,7 @@ def run_model(with_rolling_horizon, weeks):
                         if n>m:
                             model.remove(c_dict[j, t, n, m])
                             model.remove(q_dict[j, t, n, m])
-
+        #model.update()
         end_variables = time.time()
         print("Generating variables:", end_variables-start_variables)
         #******************** Objective function ********************
@@ -122,6 +129,19 @@ def run_model(with_rolling_horizon, weeks):
                     for m in range(1, M):
                         model.addConstr(q_dict[j, t, n, m] == q_dict[j, t - 1, n - 1, m - 1] - c_dict[j, t - 1, n - 1, m - 1])
 
+        for j in range(Queues):
+            for t in range(0, Time_periods):
+                for n in range(0, N):
+                    for m in range(0, M):
+                        if n <= m and t == Time_periods - 1:
+                            #model.addGenConstrMin(c_dict[j, t, n, m], [q_dict[j, t, n, m], ])
+                            pass
+        """
+        for j in range(Queues):
+            for t in range(Time_periods):
+                if t == Time_periods - 1:
+                    model.addGenConstrMin(b_dict[j, t], [w_dict[j, t], mf.get_min_capacity(j, Time_periods, Resources)])
+        """
 
         #Constriants ensuring that the number of serviced patients are equal to or less than then number of patients in the queue
         for j in range(Queues):
@@ -134,6 +154,11 @@ def run_model(with_rolling_horizon, weeks):
         for j in range(Queues):
             for t in range(Time_periods):
                 model.addConstr(b_dict[j, t] == gp.quicksum(c_dict[j, t, n, m] for n in range(N) for m in range(M)))
+
+        #Defining b_jt
+        for j in range(Queues):
+            for t in range(Time_periods):
+                model.addConstr(w_dict[j, t] == gp.quicksum(q_dict[j, t, n, m] for n in range(N) for m in range(M)))
 
 
         #TODO: Finn verdi for Big S
@@ -180,8 +205,8 @@ def run_model(with_rolling_horizon, weeks):
                 pass
 
         #The number of shifts must be below a value K
-        model.addConstr(gp.quicksum(u_A_dict[j, t] for j in range(Queues) for t in range(Time_periods))<= K)
-        model.addConstr(gp.quicksum(u_B_dict[j, t] for j in range(Queues) for t in range(Time_periods))<= K)
+        model.addConstr(gp.quicksum(u_A_dict[j, t] for j in range(Queues) for t in range(Time_periods)) <= K)
+        model.addConstr(gp.quicksum(u_B_dict[j, t] for j in range(Queues) for t in range(Time_periods)) <= K)
 
 
         #Printing the time it took to generate the constraints
@@ -194,7 +219,7 @@ def run_model(with_rolling_horizon, weeks):
         status = model.status
         if status == 2:
             runtime = model.Runtime
-            print(colored("Found optimal solution in %g seconds (%g minutes)" % (runtime, (runtime/60)), 'green', attrs = ['bold']))
+            print(colored("Found optimal solution in %g seconds (%g minutes)" % (runtime, (runtime / 60)), 'green', attrs = ['bold']))
         elif status == 3:
             print(colored("Model is infeasible", 'red', attrs = ['bold']))
             sys.exit()
@@ -222,10 +247,10 @@ def run_model(with_rolling_horizon, weeks):
     #mf.variable_printer("x", x_dict)
     #print("\n")
     print(colored("u_A(j, t)", 'green', attrs = ['underline']))
-    #mf.variable_printer("u_A", u_A_dict)
-    #print("\n")
+    mf.variable_printer("u_A", u_A_dict)
+    print("\n")
     print(colored("u_B(j, t)", 'green', attrs = ['underline']))
-    #mf.variable_printer("u_B", u_B_dict)
+    mf.variable_printer("u_B", u_B_dict)
 
 
     model.write("/Users/haraldaarskog/GoogleDrive/Masteroppgave/Git/Thesis/src/output/model.lp")
@@ -238,25 +263,28 @@ def run_model(with_rolling_horizon, weeks):
 
     #(husk at denne leser q-verdiene fra løsningen som akkurat er skrevet til fil)
 
-    sum_D, sum_E, sum_G, in_queue_last_time_period = mf.calculate_stats(Queues, D_jt, E_jnm, G_jtnm)
+    sum_D, sum_E, sum_G, in_queue_last_time_period = mf.calculate_stats(Queues, D_jt, E_jnm, G_jtnm, shift)
 
 
 
     t = BeautifulTable()
     t.column_headers = [colored("Description", attrs = ['bold']), colored("Amount", attrs = ['bold'])]
     t.append_row(["Patients exiting the system", exit_people])
-    t.append_row(["Number of new patients entering the system", sum_D])
-    t.append_row(["Number of rollover patients in queue", sum_E])
-    t.append_row(["Number of rollover-service patients from last planning period", sum_G])
+    t.append_row(["Number of new patients entering the system", sum_D*weeks])
+    t.append_row(["Number of rollover-queue patients entering the system", sum_E])
+    t.append_row(["Number of rollover-service patients entering the system", sum_G])
     t.append_row(["Number of patients still in queue by last time period", in_queue_last_time_period])
-    t.append_row(["Share of finished patients", exit_people/(sum_D+sum_E+sum_G)])
+    t.append_row(["Share of finished patients", exit_people / (sum_D*weeks + sum_E + sum_G)])
     t.set_style(BeautifulTable.STYLE_BOX)
     print(t)
 
     #Outputing the time it took to print results and write to file
     end_print = time.time()
-    print("Printing:", end_print-start_print)
+    print("Printing:", end_print - start_print)
+    mg.create_gantt_chart(Queues, Time_periods, mf.loadSolution("output/model_solution.sol")["b"])
+
 
 
 #Running the model
-run_model(False, 1)
+
+run_model(weeks=2, shift=7, with_rolling_horizon=False, reset=False)

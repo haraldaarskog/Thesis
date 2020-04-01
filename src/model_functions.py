@@ -59,10 +59,9 @@ def loadSolution(file_name):
         if variable not in set_of_variables:
             set_of_variables.add(variable)
             res_dict[variable]={}
-        indices=arr[:-1].astype(int)
+        indices=(np.round(arr[:-1].astype(float))).astype(int)
         res_dict[variable][tuple(indices)]=value
     return res_dict
-
 
 def shift_solution(d, shift):
     d_new={}
@@ -128,9 +127,6 @@ def delete_all_queue_entries(queue):
     queue_dim=queue.shape
     return np.zeros(queue_dim)
 
-def create_empty_initial_queue(j,n,m):
-    return np.zeros((j,n,m))
-
 def create_normal_distribution(mean,std_deviation,n_samples):
     #mean, std_deviation = 100, 10 # mean and standard deviation
     s = np.random.normal(mean, std_deviation, n_samples)
@@ -166,7 +162,7 @@ def serviced_in_previous(J,T,N,M,shift,c_dict):
     arr=np.zeros((J,T,N,M))
     for i in range(J):
         for j in range(J):
-            for t in range(T):
+            for t in range(shift):
                 for n in range(N):
                     for m in range(M):
                         value=c_dict[i,t,n,m]
@@ -244,13 +240,23 @@ def number_of_days_before_last_service(c_variable):
             sum_people+=value
     return sum_m,sum_people
 
-def calculate_stats(J,D_jt,E_jnm,G_jtnm):
+def calculate_stats(J,D_jt,E_jnm,G_jtnm,shift):
     #antall initielt i kø
     sum_E=np.sum(E_jnm)
     #antall behandlede som kommer over en periode
     sum_G=np.sum(G_jtnm)
     #antall i kø som ikke er blitt behandlet enda ved tid T
-    in_queue_last_time_period=np.sum(old_solution("output/model_solution.sol","q",0)[:,-1,:,:])
+    in_queue_last_time_period=np.sum(old_solution("output/model_solution.sol","q",0)[:,shift-1,:,:])
     #Antall innkommende pasienter
     sum_D=np.sum(D_jt[:J])
     return sum_D,sum_E,sum_G,in_queue_last_time_period
+
+
+def get_min_capacity(j, T, R):
+    min_val=100
+    for r in range(R):
+        for t in range(T):
+            val=np.divide(mp.L_rt[r,t % 7], mp.H_jr[j,r])
+            if val<min_val:
+                min_val=val
+    return min_val

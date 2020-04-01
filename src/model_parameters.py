@@ -42,7 +42,7 @@ activity_resource_map=np.array([
         [0,0,0,0,0,0,0,0,0,0]])
 
 
-K=1000000000
+K=100
 
 #Objective value weight
 def obj_weights(n):
@@ -74,10 +74,10 @@ W_jn=np.matrix([
 
 #New demand in queue j in time period t
 D_jt=np.matrix([
-        [20,0,0,0,0,0,0],
-        [20,0,0,0,0,0,0],
+        [17,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
-        [8,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0],
+        [1,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
