@@ -1,10 +1,9 @@
 import numpy as np
-import gurobipy as gp
-from prettytable import PrettyTable
 import pandas as pd
 import model_parameters as mp
 from datetime import datetime
 import re
+import sys
 
 patient_processes=mp.patient_processes
 activity_dict=mp.activity_dict
@@ -39,7 +38,6 @@ def variable_printer(var_name,dict):
             value=value.x
         except Exception as e:
             continue
-        #if isinstance(value, gp.Var):
 
         if value>0:
             print('%s%s = %3.2f' % (var_name,key, value))
@@ -53,15 +51,23 @@ def loadSolution(file_name):
     for line in file:
         if line[0]=="#":
             continue
-        variable=line[0]
-        arr=np.asarray(re.findall('\d+(?:\.\d+)?', line))
-        value=arr[-1].astype(float)
+        variable=line.split("[")[0]
+        indices_1, value = line.split(" ")
+        arr=np.asarray(re.findall('\d+(?:\.\d+)?', indices_1))
+        value=float(value)
         if variable not in set_of_variables:
             set_of_variables.add(variable)
             res_dict[variable]={}
-        indices=(np.round(arr[:-1].astype(float))).astype(int)
-        res_dict[variable][tuple(indices)]=value
+        indices_2=(np.round(arr.astype(float))).astype(int)
+        res_dict[variable][tuple(indices_2)]=value
     return res_dict
+"""
+a="q[2,10,0,8] 7.0000000000000009e+00"
+first,last=a.split(" ")#.astype(float)#.astype(int)
+arr=np.asarray(re.findall('\d+(?:\.\d+)?', first))
+
+print(arr)
+"""
 
 def shift_solution(d, shift):
     d_new={}
@@ -79,6 +85,7 @@ def find_max_of_dict(d):
     arr2=[]
     flag=True
     for key in d:
+
         if flag:
             key_len=len(key)
             arr=np.zeros(key_len)
@@ -134,12 +141,13 @@ def create_normal_distribution(mean,std_deviation,n_samples):
 
 
 #Writing the r
-def write_to_file(J,T,N,M,G,A,R,obj_value,num_days_last_service,n_variables,n_constraints,runtime):
+def write_to_file(J,T,N,M,G,A,R,obj_value,n_variables,n_constraints,runtime):
     now = datetime.now()
     dt_string = now.strftime("%d/%m %H:%M:%S")
     date,time=dt_string.split(" ")
+    day,month=date.split("/")
     runtime=np.round(runtime,4)
-    df=pd.read_excel('run_data.xlsx', index_col=0)
+    df=pd.read_excel('logging/run_data.xlsx', index_col=0)
     flag=True
     for index, row in df.iterrows():
         J_row=row[0]
@@ -150,15 +158,15 @@ def write_to_file(J,T,N,M,G,A,R,obj_value,num_days_last_service,n_variables,n_co
         A_row=row[5]
         R_row=row[6]
         if J==J_row and T==T_row and N==N_row and M==M_row and G==G_row and A==A_row and R==R_row:
-            df.loc[index]=J,T,N,M,G,A,R,obj_value,num_days_last_service,n_variables,n_constraints,runtime,date,time
+            df.loc[index]=J,T,N,M,G,A,R,obj_value,n_variables,n_constraints,runtime,day,month,time
             flag=False
             break
     if flag==True:
-        df.loc[len(df)]=[J,T,N,M,G,A,R,obj_value,num_days_last_service,n_variables,n_constraints,runtime,date,time]
-    df = df.sort_values(by=['Date','Time'],ascending=False)
-    df.to_excel('run_data.xlsx',index=True)
+        df.loc[len(df)]=[J,T,N,M,G,A,R,obj_value,n_variables,n_constraints,runtime,day,month,time]
+    df = df.sort_values(by=['Day',  'Month', 'Time'],ascending=[False, False, False])
+    df.to_excel('logging/run_data.xlsx',index=True)
 
-def serviced_in_previous(J,T,N,M,shift,c_dict):
+def serviced_in_previous(J,T,N,M,shift,c_dict,Q_ij):
     arr=np.zeros((J,T,N,M))
     for i in range(J):
         for j in range(J):
@@ -167,7 +175,7 @@ def serviced_in_previous(J,T,N,M,shift,c_dict):
                     for m in range(M):
                         value=c_dict[i,t,n,m]
                         delay=mp.M_ij[i,j]
-                        if value>0 and return_Q_ij(i,j)==1 and (t+delay)>=shift:
+                        if value>0 and Q_ij[i,j]==1 and (t+delay)>=shift:
                             mod=(t+delay)%shift
                             arr[j,mod,n,m]=value
     return arr
@@ -175,15 +183,7 @@ def serviced_in_previous(J,T,N,M,shift,c_dict):
 
 
 
-def find_ga(queue,pp):
-    rows,cols=pp.shape
-    count=-1
-    for r in range(rows):
-        for c in range(cols):
-            if pp[r,c]==1:
-                count+=1
-            if count==queue:
-                return r,c
+
 
 
 def check_activity(a1,a2,g):
@@ -201,23 +201,7 @@ def check_activity(a1,a2,g):
 
     return 0
 
-def return_Q_ij(i,j):
-    pp=mp.patient_processes
-    g_i,a_i=find_ga(i,pp)
-    g_j,a_j=find_ga(j,pp)
-    if pp[g_i,a_i]==0 or pp[g_j,a_j]==0:
-        return 0
-    elif g_i!=g_j:
-        return 0
-    elif a_i>=a_j:
-        return 0
-    elif check_activity(a_i,a_j,pp[g_i]):
-        return 1
-    else:
-        return 0
-
-
-def is_last_queue(j):
+def is_last_queue_in_diagnosis(j):
     sum1=-1
     for row in mp.patient_processes:
         sum1+=sum(row)
@@ -235,7 +219,7 @@ def number_of_days_before_last_service(c_variable):
         except Exception as e:
             continue
         queue=key[0]
-        if value>0 and is_last_queue(queue):
+        if value>0 and is_last_queue_in_diagnosis(queue):
             sum_m+=key[-1]*value
             sum_people+=value
     return sum_m,sum_people
@@ -260,3 +244,140 @@ def get_min_capacity(j, T, R):
             if val<min_val:
                 min_val=val
     return min_val
+
+def is_first_queue_in_treatment(j):
+    sum1=np.sum(mp.patient_processes)
+    for row in mp.treatment_processes:
+        if j==sum1:
+            return True
+        sum1+=sum(row)
+    return False
+
+def get_total_number_of_diagnosis_queues():
+    return np.sum(mp.patient_processes)
+
+def get_total_number_of_treatment_queues():
+    return np.sum(mp.treatment_processes)
+
+def is_in_sequence_diagnosis(i, j):
+    if i >= j:
+        return False
+    elif j >= i + 2:
+        return False
+    elif is_last_queue_in_diagnosis(i):
+        return False
+    else:
+        return True
+
+
+def is_last_queue_in_treatment(j, d_queues):
+    sum1 = -1 + d_queues
+    for row in mp.treatment_processes:
+        sum1 += sum(row)
+        if j == sum1:
+            return True
+    return False
+
+
+#En dictioinary som returnerer lovlige stiretninger
+def create_Q_ij():
+
+    q_dict = {}
+    d_queues = get_total_number_of_diagnosis_queues()
+    t_queues = get_total_number_of_treatment_queues()
+    Queues = d_queues + t_queues + 1
+
+    for i in range(Queues):
+        for j in range(Queues):
+            if i >= j:
+                q_dict[i, j] = 0
+            elif j >= i + 2:
+                q_dict[i, j] = 0
+            elif is_last_queue_in_diagnosis(i):
+                q_dict[i, j] = 0
+            elif is_last_queue_in_treatment(i, d_queues):
+                q_dict[i, j] = 0
+            else:
+                q_dict[i, j] = 1
+    return q_dict
+
+
+def get_total_number_of_queues():
+    return get_total_number_of_diagnosis_queues()+get_total_number_of_treatment_queues()
+
+def queue_is_treatment(j):
+    if j >= get_total_number_of_queues():
+        print("Error, there are not that many queues defined")
+        sys.exit()
+    if j >= get_total_number_of_diagnosis_queues():
+         return True
+    return False
+
+
+def find_ga(queue):
+    if queue >= get_total_number_of_queues():
+        print("Error!!!")
+        sys.exit()
+    pp = mp.patient_processes
+    tp = mp.treatment_processes
+    rows_pp,cols_pp = pp.shape
+    rows_tp,cols_tp = tp.shape
+
+    count = -1
+    if not queue_is_treatment(queue):
+        for r in range(rows_pp):
+            for c in range(cols_pp):
+                if pp[r, c] == 1:
+                    count += 1
+                if count == queue:
+                    return r,c
+    else:
+        queue = queue % get_total_number_of_diagnosis_queues()
+        for r_t in range(rows_tp):
+            for c_t in range(cols_tp):
+                if tp[r_t, c_t] == 1:
+                    count += 1
+                if count == queue:
+                    return r_t, c_t
+
+
+
+def create_M_ij():
+    m_dict={}
+    Queues = get_total_number_of_queues()
+    for i in range(Queues):
+        g, a = find_ga(i)
+        if queue_is_treatment(i):
+            m_dict[i] = mp.treatment_recovery_times[a]
+        else:
+            m_dict[i] = mp.diagnosis_recovery_times[a]
+    return m_dict
+
+
+a=create_M_ij()
+for key in a:
+    if a[key]>0:
+        print(key, a[key])
+
+
+
+#OLD functions, can be used for later
+"""
+def return_Q_ij(i,j):
+    pp=mp.patient_processes
+    g_i,a_i=find_ga(i,pp)
+    g_j,a_j=find_ga(j,pp)
+
+    tp=mp.treatment_processes
+
+    if pp[g_i,a_i]==0 or pp[g_j,a_j]==0:
+        return 0
+    elif g_i!=g_j:
+        return 0
+    elif a_i>=a_j:
+        return 0
+    elif check_activity(a_i,a_j,pp[g_i]):
+        return 1
+    else:
+        return 0
+"""

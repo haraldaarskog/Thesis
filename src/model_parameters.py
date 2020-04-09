@@ -25,12 +25,23 @@ resource_dict={
 
 #Patient processes. Patient process on rows, activity on columns
 #1 if patient process conducts activity, 0 otherwise
-patient_processes=np.array([
+patient_processes = np.array([
         [1,0,1,0,0,1],
         [1,1,0,0,1,1],
         [1,0,0,0,0,1],
         [1,1,0,0,0,1],
         [1,1,0,0,0,1]])
+
+treatment_processes = np.array([
+        [1,0,1],
+        [1,0,0],
+        [1,1,0]])
+
+#recovery time after activity 0-5
+diagnosis_recovery_times = np.array([1,1,1,1,1,1])
+
+#recovery time after treatment 0-2
+treatment_recovery_times = np.array([1,1,1])
 
 #activities on rows, resources on columns. The entry represents the amount of resource j that is needed in activity i.
 activity_resource_map=np.array([
@@ -167,12 +178,14 @@ M_ij=np.matrix([
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]])
 
+
+
 """
 #Fractions of patients moving from queue i to queue j
 Q_ij=np.matrix([
         [0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         [0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         [0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         [0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         [0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0],

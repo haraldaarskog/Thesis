@@ -1,5 +1,3 @@
-
-
 # Importing the matplotlb.pyplot
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as font_manager
@@ -77,5 +75,5 @@ def create_gantt_chart(Queues, Time_periods, variable_dict):
 
     plt.savefig("figures/gantt_chart.png")
 
-b_jt=mf.loadSolution("output/model_solution.sol")["b"]
+#b_jt=mf.loadSolution("output/model_solution.sol")["b"]
 #create_gantt_chart(3, 14, b_jt)
