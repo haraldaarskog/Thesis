@@ -22,6 +22,7 @@ resource_dict={
 
 }
 
+share_of_patients_into_treatment=1
 
 #Patient processes. Patient process on rows, activity on columns
 #1 if patient process conducts activity, 0 otherwise
@@ -35,7 +36,7 @@ patient_processes = np.array([
 treatment_processes = np.array([
         [1,0,1],
         [1,0,0],
-        [1,1,0]])
+        [0,1,0]])
 
 #recovery time after activity 0-5
 diagnosis_recovery_times = np.array([1,1,1,1,1,1])
@@ -58,29 +59,6 @@ K=100
 #Objective value weight
 def obj_weights(n):
     return n
-"""
-W_jn=np.matrix([
-        [0,1,2,3,4,5,6,7,8,9],
-        [0,1,2,3,4,5,6,7,8,9],
-        [0,1,2,3,4,5,6,7,8,9],
-        [0,1,2,3,4,5,6,7,8,9],
-        [0,1,2,3,4,5,6,7,8,9],
-        [0,1,2,3,4,5,6,7,8,9],
-        [0,1,2,3,4,5,6,7,8,9],
-        [0,1,2,3,4,5,6,7,8,9],
-        [0,1,2,3,4,5,6,7,8,9],
-        [0,1,2,3,4,5,6,7,8,9],
-        [0,1,2,3,4,5,6,7,8,9],
-        [0,1,2,3,4,5,6,7,8,9],
-        [0,1,2,3,4,5,6,7,8,9],
-        [0,1,2,3,4,5,6,7,8,9],
-        [0,1,2,3,4,5,6,7,8,9],
-        [0,1,2,3,4,5,6,7,8,9],
-        [0,1,2,3,4,5,6,7,8,9],
-        [0,1,2,3,4,5,6,7,8,9],
-        [0,1,2,3,4,5,6,7,8,9],
-        [0,1,2,3,4,5,6,7,8,9]])
-"""
 
 
 #New demand in queue j in time period t
@@ -156,6 +134,7 @@ H_jr=np.array([
         [1,1,1,1,1,1,1,1,1,1]])
 
 #Expected delay from queue i to j
+"""
 M_ij=np.matrix([
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
@@ -178,7 +157,7 @@ M_ij=np.matrix([
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]])
 
-
+"""
 
 """
 #Fractions of patients moving from queue i to queue j

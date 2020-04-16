@@ -8,13 +8,15 @@ import sys
 patient_processes=mp.patient_processes
 activity_dict=mp.activity_dict
 
+output_file="output/model_solution.sol"
+
 def number_of_queues(number_of_patient_processes):
     if number_of_patient_processes>patient_processes.shape[0]:
         raise ValueError("There are not defined that much patient processes.")
     sum=0
     for i in range(number_of_patient_processes):
         sum+=patient_processes[i][:].sum()
-    return sum
+    return int(sum)
 
 def find_queue(patient_pro,activity):
     if patient_processes[patient_pro, activity]==0:
@@ -29,45 +31,38 @@ def find_queue(patient_pro,activity):
                 return sum
     return None
 
-def variable_printer(var_name,dict):
+def variable_printer(var_name, dict):
 
     for key in dict:
 
-        value=dict[key]
+        value = dict[key]
         try:
-            value=value.x
+            value = value.x
         except Exception as e:
             continue
 
-        if value>0:
-            print('%s%s = %3.2f' % (var_name,key, value))
+        if value > 0.001:
+            print('%s%s = %3.2f' % (var_name, key, value))
 
 #returns dict. very nice
 def loadSolution(file_name):
-    set_of_variables=set()
+    set_of_variables = set()
     file = open(file_name, "r")
-    res_dict={}
-    d={}
+    res_dict = {}
+    d = {}
     for line in file:
-        if line[0]=="#":
+        if line[0] == "#":
             continue
-        variable=line.split("[")[0]
+        variable = line.split("[")[0]
         indices_1, value = line.split(" ")
-        arr=np.asarray(re.findall('\d+(?:\.\d+)?', indices_1))
-        value=float(value)
+        arr = np.asarray(re.findall('\d+(?:\.\d+)?', indices_1))
+        value = float(value)
         if variable not in set_of_variables:
             set_of_variables.add(variable)
             res_dict[variable]={}
         indices_2=(np.round(arr.astype(float))).astype(int)
         res_dict[variable][tuple(indices_2)]=value
     return res_dict
-"""
-a="q[2,10,0,8] 7.0000000000000009e+00"
-first,last=a.split(" ")#.astype(float)#.astype(int)
-arr=np.asarray(re.findall('\d+(?:\.\d+)?', first))
-
-print(arr)
-"""
 
 def shift_solution(d, shift):
     d_new={}
@@ -110,7 +105,6 @@ def old_solution(file, variable, shift):
         d=shift_solution(d,shift)
     array=from_dict_to_matrix(d)
     return array
-
 
 def print_patient_process(g):
     path=patient_processes[g][:]
@@ -166,7 +160,7 @@ def write_to_file(J,T,N,M,G,A,R,obj_value,n_variables,n_constraints,runtime):
     df = df.sort_values(by=['Day',  'Month', 'Time'],ascending=[False, False, False])
     df.to_excel('logging/run_data.xlsx',index=True)
 
-def serviced_in_previous(J,T,N,M,shift,c_dict,Q_ij):
+def serviced_in_previous(J,T,N,M,shift,c_dict,Q_ij, M_ij):
     arr=np.zeros((J,T,N,M))
     for i in range(J):
         for j in range(J):
@@ -174,11 +168,28 @@ def serviced_in_previous(J,T,N,M,shift,c_dict,Q_ij):
                 for n in range(N):
                     for m in range(M):
                         value=c_dict[i,t,n,m]
-                        delay=mp.M_ij[i,j]
+                        delay=M_ij[i,j]
                         if value>0 and Q_ij[i,j]==1 and (t+delay)>=shift:
                             mod=(t+delay)%shift
                             arr[j,mod,n,m]=value
     return arr
+
+def calculate_rollover_serviced(J,T,N,M,c_dict, M_ij,shift):
+    sum=0
+    for j in range(J):
+        if is_last_queue_in_treatment(j):
+            for t in range(T):
+                for n in range(N):
+                    for m in range(M):
+                        try:
+                            value = c_dict[j,t,n,m].x
+                        except Exception as e:
+                            continue
+                        delay=M_ij[j]
+                        if value > 0 and (t + delay) > shift:
+                            mod = (t + delay) % shift
+                            sum += value
+    return sum
 
 
 
@@ -209,20 +220,24 @@ def is_last_queue_in_diagnosis(j):
             return True
     return False
 
-def number_of_days_before_last_service(c_variable):
-    sum_m=0
-    sum_people=0
+
+def number_of_exit_patients(c_variable, shift):
+    sum_m = 0
+    sum_exit_treatment = 0
+    sum_exit_diagnosis = 0
     for key in c_variable:
-        value=c_variable[key]
+        value = c_variable[key]
         try:
             value=value.x
         except Exception as e:
             continue
         queue=key[0]
-        if value>0 and is_last_queue_in_diagnosis(queue):
-            sum_m+=key[-1]*value
-            sum_people+=value
-    return sum_m,sum_people
+        time=key[1]
+        if value > 0 and is_last_queue_in_treatment(queue):
+            sum_exit_treatment += value
+        elif value > 0 and is_last_queue_in_diagnosis(queue):
+            sum_exit_diagnosis += value
+    return sum_exit_diagnosis, sum_exit_treatment
 
 def calculate_stats(J,D_jt,E_jnm,G_jtnm,shift):
     #antall initielt i kø
@@ -270,8 +285,8 @@ def is_in_sequence_diagnosis(i, j):
         return True
 
 
-def is_last_queue_in_treatment(j, d_queues):
-    sum1 = -1 + d_queues
+def is_last_queue_in_treatment(j):
+    sum1 = -1 + get_total_number_of_diagnosis_queues()
     for row in mp.treatment_processes:
         sum1 += sum(row)
         if j == sum1:
@@ -295,7 +310,7 @@ def create_Q_ij():
                 q_dict[i, j] = 0
             elif is_last_queue_in_diagnosis(i):
                 q_dict[i, j] = 0
-            elif is_last_queue_in_treatment(i, d_queues):
+            elif is_last_queue_in_treatment(i):
                 q_dict[i, j] = 0
             else:
                 q_dict[i, j] = 1
@@ -303,7 +318,7 @@ def create_Q_ij():
 
 
 def get_total_number_of_queues():
-    return get_total_number_of_diagnosis_queues()+get_total_number_of_treatment_queues()
+    return int(get_total_number_of_diagnosis_queues()+get_total_number_of_treatment_queues())
 
 def queue_is_treatment(j):
     if j >= get_total_number_of_queues():
@@ -341,7 +356,6 @@ def find_ga(queue):
                     return r_t, c_t
 
 
-
 def create_M_ij():
     m_dict={}
     Queues = get_total_number_of_queues()
@@ -354,11 +368,17 @@ def create_M_ij():
     return m_dict
 
 
-a=create_M_ij()
-for key in a:
-    if a[key]>0:
-        print(key, a[key])
+def generate_last_queues_in_diagnosis():
+    queue_set=set()
+    for j in range(get_total_number_of_diagnosis_queues()):
+        if is_last_queue_in_diagnosis(j):
+            queue_set.add(j)
+    return queue_set
 
+
+def get_number_of_treatment_paths():
+    paths, activitites = mp.treatment_processes.shape
+    return int(paths)
 
 
 #OLD functions, can be used for later
