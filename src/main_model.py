@@ -24,16 +24,23 @@ def optimize_model(weeks, shift, with_rolling_horizon, reset):
     #********************Set sizes********************
     Patient_processes = 1
 
+
+    total_diagnosis_queues = mf.get_total_number_of_diagnosis_queues()
+    total_treatment_queues = mf.get_total_number_of_treatment_queues()
+
+    total_queues = mf.get_total_number_of_queues()
+
     #The number of queues is a function of the number of patient processes
     #and the number of activities in each patient process
-    total_queues = mf.get_total_number_of_queues()
     Queues = mf.number_of_queues(Patient_processes)
+
+    number_of_current_queues = Queues + total_treatment_queues
+
     set_of_last_queues_in_diagnosis=mf.generate_last_queues_in_diagnosis()
 
     Time_periods = 7 * weeks
-    N = 15
-    M = 15
-    P = 3
+    N = 25
+    M = 25
     Activities = mp.patient_processes.shape[1]
     Resources = mp.activity_resource_map.shape[1]
 
@@ -45,7 +52,7 @@ def optimize_model(weeks, shift, with_rolling_horizon, reset):
 
     t = BeautifulTable()
     t.column_headers=['Queues', 'Time periods', 'N', 'M', 'Patient processes', 'Activities', 'Resources']
-    t.append_row([Queues, Time_periods, N, M, Patient_processes, Activities, Resources])
+    t.append_row([number_of_current_queues, Time_periods, N, M, Patient_processes, Activities, Resources])
     t.set_style(BeautifulTable.STYLE_BOX)
     print(t)
 
@@ -66,9 +73,9 @@ def optimize_model(weeks, shift, with_rolling_horizon, reset):
     #if the model is executed with RH, the input from previous runs are included
     if with_rolling_horizon == True and reset == False:
         A_jt = mf.old_solution("output/model_solution.sol", "b", shift)
-        E_jnm = mf.old_solution("output/model_solution.sol", "q", 0)[:, shift-1, :, :]
+        E_jnm = mf.create_E_jnm(total_queues, N, M, shift)
         c_jtnm_old = mf.old_solution("output/model_solution.sol", "c", 0)
-        G_jtnm = mf.serviced_in_previous(Queues, Time_periods, N, M, shift, c_jtnm_old, Q_ij, M_ij)
+        G_jtnm = mf.serviced_in_previous(total_queues, Time_periods, N, M, shift, c_jtnm_old, Q_ij, M_ij)
     else:
         E_jnm = np.zeros((total_queues, N, M))
         A_jt = np.zeros((total_queues, Time_periods))
@@ -86,8 +93,7 @@ def optimize_model(weeks, shift, with_rolling_horizon, reset):
         model.setParam("OutputFlag", 0)
 
         #******************** Variables ********************
-        total_diagnosis_queues = mf.get_total_number_of_diagnosis_queues()
-        total_treatment_queues = mf.get_total_number_of_treatment_queues()
+
         start_variables = time.time()
         c_dict  =  model.addVars(total_queues, Time_periods, N, M, vtype = GRB.CONTINUOUS, lb = 0.0, ub = GRB.INFINITY, name = "c")
         q_dict  =  model.addVars(total_queues, Time_periods, N, M, vtype = GRB.CONTINUOUS, lb = 0.0, ub = GRB.INFINITY, name = "q")
@@ -100,11 +106,8 @@ def optimize_model(weeks, shift, with_rolling_horizon, reset):
         u_A_dict = model.addVars(total_queues, Time_periods, vtype = GRB.CONTINUOUS, lb = 0.0, ub = GRB.INFINITY, name = "u_A")
         u_B_dict = model.addVars(total_queues, Time_periods, vtype = GRB.CONTINUOUS, lb = 0.0, ub = GRB.INFINITY, name = "u_B")
 
-        e_patients = model.addVars(total_queues, Time_periods, vtype = GRB.CONTINUOUS, lb = 0.0, ub = GRB.INFINITY, name = "e_p")
-
-
         model.update()
-        for j in range(Queues):
+        for j in range(total_queues):
             for t in range(Time_periods):
                 for n in range(N):
                     for m in range(M):
@@ -145,10 +148,9 @@ def optimize_model(weeks, shift, with_rolling_horizon, reset):
             elif j >= total_queues - total_treatment_queues:
                 for t in range(Time_periods):
                     for m in range(M):
-                        if t == 0 and m >=0:
+                        if t == 0 and m >= 0:
                             for n in range(N):
-                                #model.addConstr(q_dict[j, t, n, m] == E_jnm[j, n, m])
-                                pass
+                                model.addConstr(q_dict[j, t, n, m] == E_jnm[j, n, m])
 
                         elif mf.is_first_queue_in_treatment(j):
                             model.addConstr(q_dict[j, t, 0, m] == mp.share_of_patients_into_treatment*(1/mf.get_number_of_treatment_paths()) * gp.quicksum(c_dict[i, t - M_ij[i], n, m] for i in set_of_last_queues_in_diagnosis for n in range(N) if (t - M_ij[i]) >= 0))
@@ -262,12 +264,14 @@ def optimize_model(weeks, shift, with_rolling_horizon, reset):
     number_of_constraints = len(model.getConstrs())
     number_of_variables = len(model.getVars())
     sum_exit_diagnosis, sum_exit_treatment = mf.number_of_exit_patients(c_dict, shift)
-    mf.write_to_file(Queues, Time_periods, N, M, Patient_processes, Activities, Resources, model.objVal, number_of_variables, number_of_constraints, runtime)
+    mf.write_to_file(number_of_current_queues, Time_periods, N, M, Patient_processes, Activities, Resources, model.objVal, number_of_variables, number_of_constraints, runtime)
 
     #(husk at denne leser q-verdiene fra løsningen som akkurat er skrevet til fil)
 
-    sum_D, sum_E, sum_G, in_queue_last_time_period = mf.calculate_stats(Queues, D_jt, E_jnm, G_jtnm, shift)
-
+    sum_D, sum_E, sum_G= mf.calculate_stats(Queues, D_jt, E_jnm, G_jtnm, shift)
+    rollover_queue_next_period = np.sum(mf.create_E_jnm(total_queues, N, M, shift))
+    c_jtnm_current = mf.old_solution("output/model_solution.sol", "c", 0)
+    rollover_service_next_period = np.sum(mf.serviced_in_previous(total_queues, Time_periods, N, M, shift, c_jtnm_current, Q_ij, M_ij))
 
 
     t = BeautifulTable()
@@ -281,8 +285,8 @@ def optimize_model(weeks, shift, with_rolling_horizon, reset):
     t.append_row(["Patients exiting from treatment", sum_exit_treatment])
     t.append_row(["Total patient exiting", colored((1-mp.share_of_patients_into_treatment) * sum_exit_diagnosis + sum_exit_treatment, 'red')])
 
-    t.append_row(["Number of patients still in queue by last time period", in_queue_last_time_period])
-    t.append_row(["Rollover serviced this period", mf.calculate_rollover_serviced(total_queues, Time_periods, N, M, c_dict, M_ij, shift)])
+    t.append_row(["Rollover-queue patients into next period", rollover_queue_next_period])
+    t.append_row(["Rollover-service into next period", rollover_service_next_period])
     t.append_row(["Exiting patients / Incoming patients", ((1-mp.share_of_patients_into_treatment) * sum_exit_diagnosis + sum_exit_treatment) / (sum_D*weeks + sum_E + sum_G)])
 
 
@@ -294,12 +298,19 @@ def optimize_model(weeks, shift, with_rolling_horizon, reset):
     print("Printing:", end_print - start_print)
     mg.create_gantt_chart(Queues, Time_periods, mf.loadSolution("output/model_solution.sol")["b"])
 
+
+
 #Running the model
 def run_model():
-    optimize_model(weeks = 1, shift = 0, with_rolling_horizon = False, reset = True)
+    optimize_model(weeks = 1, shift = 6, with_rolling_horizon = True, reset = False)
     #shift = 0: Shifter ikke input-køene. Tar inn siste periode.
 
 run_model()
+
+
+
+
+
 
 #bin
 """

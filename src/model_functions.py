@@ -160,19 +160,7 @@ def write_to_file(J,T,N,M,G,A,R,obj_value,n_variables,n_constraints,runtime):
     df = df.sort_values(by=['Day',  'Month', 'Time'],ascending=[False, False, False])
     df.to_excel('logging/run_data.xlsx',index=True)
 
-def serviced_in_previous(J,T,N,M,shift,c_dict,Q_ij, M_ij):
-    arr=np.zeros((J,T,N,M))
-    for i in range(J):
-        for j in range(J):
-            for t in range(shift):
-                for n in range(N):
-                    for m in range(M):
-                        value=c_dict[i,t,n,m]
-                        delay=M_ij[i,j]
-                        if value>0 and Q_ij[i,j]==1 and (t+delay)>=shift:
-                            mod=(t+delay)%shift
-                            arr[j,mod,n,m]=value
-    return arr
+
 
 def calculate_rollover_serviced(J,T,N,M,c_dict, M_ij,shift):
     sum=0
@@ -244,11 +232,9 @@ def calculate_stats(J,D_jt,E_jnm,G_jtnm,shift):
     sum_E=np.sum(E_jnm)
     #antall behandlede som kommer over en periode
     sum_G=np.sum(G_jtnm)
-    #antall i kø som ikke er blitt behandlet enda ved tid T
-    in_queue_last_time_period=np.sum(old_solution("output/model_solution.sol","q",0)[:,shift-1,:,:])
     #Antall innkommende pasienter
     sum_D=np.sum(D_jt[:J])
-    return sum_D,sum_E,sum_G,in_queue_last_time_period
+    return sum_D,sum_E,sum_G
 
 
 def get_min_capacity(j, T, R):
@@ -380,9 +366,51 @@ def get_number_of_treatment_paths():
     paths, activitites = mp.treatment_processes.shape
     return int(paths)
 
+def serviced_in_previous(J,T,N,M,shift,c_dict,Q_ij, M_ij):
+    num=get_number_of_treatment_paths()
+    arr=np.zeros((J,T,N,M))
+    for i in range(J):
+        for j in range(J):
+            for t in range(shift + 1):
+                for n in range(N):
+                    for m in range(M):
+                        value=c_dict[i,t,n,m]
+                        delay=M_ij[i]
+                        if value > 0 and Q_ij[i,j]==1 and (t+delay)>shift:
+
+                            mod=(t+delay)%shift
+                            arr[j,mod,n,m]=value
+                        elif value > 0 and is_last_queue_in_diagnosis(i) and is_first_queue_in_treatment(j) and (t+delay)>shift:
+
+                            mod = (t+delay)%shift
+                            arr[j,mod,n,m]=value/num
+    return arr
+
+
+def create_E_jnm(J, N, M, shift):
+    E_jnm = old_solution("output/model_solution.sol", "q", 0)[:, shift, :, :]
+    old_c = old_solution("output/model_solution.sol", "c", 0)[:, shift, :, :]
+    new_array=np.zeros((J,N,M))
+    for j in range(J):
+        for n in range(N):
+            for m in range(M):
+                value_q = E_jnm[j,n,m]
+                value_c = old_c[j,n,m]
+                if value_q > 0.0001:
+                    new_array[j, n + 1, m + 1] = value_q - value_c
+    return new_array
+
+
+
+
+
+
+
 
 #OLD functions, can be used for later
 """
+q(18, 6, 0, 3) = 0.33
+q(18, 6, 1, 3) = 0.33
 def return_Q_ij(i,j):
     pp=mp.patient_processes
     g_i,a_i=find_ga(i,pp)
