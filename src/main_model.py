@@ -22,7 +22,7 @@ def optimize_model(weeks, shift, with_rolling_horizon, reset):
 
 
     #********************Set sizes********************
-    Patient_processes = 1
+    Patient_processes = 2
 
 
     total_diagnosis_queues = mf.get_total_number_of_diagnosis_queues()
@@ -98,7 +98,7 @@ def optimize_model(weeks, shift, with_rolling_horizon, reset):
         c_dict  =  model.addVars(total_queues, Time_periods, N, M, vtype = GRB.CONTINUOUS, lb = 0.0, ub = GRB.INFINITY, name = "c")
         q_dict  =  model.addVars(total_queues, Time_periods, N, M, vtype = GRB.CONTINUOUS, lb = 0.0, ub = GRB.INFINITY, name = "q")
 
-        b_dict = model.addVars(total_queues, Time_periods, vtype = GRB.INTEGER, lb = 0.0, ub = GRB.INFINITY, name = "b")
+        b_dict = model.addVars(total_queues, Time_periods, vtype = GRB.CONTINUOUS, lb = 0.0, ub = GRB.INFINITY, name = "b")
         w_dict = model.addVars(total_queues, Time_periods, vtype = GRB.CONTINUOUS, lb = 0.0, ub = GRB.INFINITY, name = "w")
 
         #x_dict = model.addVars(Time_periods, M, Patient_processes, Activities, vtype = GRB.BINARY, lb = 0.0, ub = GRB.INFINITY, name = "x")
@@ -114,6 +114,7 @@ def optimize_model(weeks, shift, with_rolling_horizon, reset):
                         if n>m:
                             model.remove(c_dict[j, t, n, m])
                             model.remove(q_dict[j, t, n, m])
+
         for j in range(Queues, total_queues - total_treatment_queues):
             for t in range(Time_periods):
                 for n in range(N):
@@ -126,7 +127,7 @@ def optimize_model(weeks, shift, with_rolling_horizon, reset):
         print("Generating variables:", end_variables - start_variables)
         #******************** Objective function ********************
 
-        model.setObjective(gp.quicksum(mp.obj_weights(n) * q_dict[j, t, n, m]  for j in range(total_queues) for t in range(Time_periods) for n in range(N) for m in range(M)), GRB.MINIMIZE)
+        model.setObjective(gp.quicksum(mp.obj_weights(j, n) * q_dict[j, t, n, m]  for j in range(total_queues) for t in range(Time_periods) for n in range(N) for m in range(M)), GRB.MINIMIZE)
 
         #******************** Constraints ********************
 
@@ -144,18 +145,17 @@ def optimize_model(weeks, shift, with_rolling_horizon, reset):
                                 if n <= m:
                                     model.addConstr(q_dict[j, t, n, m] == E_jnm[j, n, m] + G_jtnm[j, t, n, m])
                         else:
-                            model.addConstr(q_dict[j, t, 0, m] == gp.quicksum(G_jtnm[j, t, n, m] for n in range(N)) + gp.quicksum(c_dict[i, t-M_ij[i], n, m] * Q_ij[i, j] for i in range(Queues) for n in range(N) if (t - M_ij[i]) >= 0))
+                            model.addConstr(q_dict[j, t, 0, m] == gp.quicksum(G_jtnm[j, t, n, m] for n in range(N)) + gp.quicksum(c_dict[i, t - M_ij[i], n, m] * Q_ij[i, j] for i in range(Queues) for n in range(N) if (t - M_ij[i]) >= 0))
             elif j >= total_queues - total_treatment_queues:
                 for t in range(Time_periods):
                     for m in range(M):
-                        if t == 0 and m >= 0:
+                        if t == 0 and m >= 1:
                             for n in range(N):
-                                model.addConstr(q_dict[j, t, n, m] == E_jnm[j, n, m])
-
+                                model.addConstr(q_dict[j, t, n, m] == E_jnm[j, n, m] + G_jtnm[j, t, n, m])
                         elif mf.is_first_queue_in_treatment(j):
-                            model.addConstr(q_dict[j, t, 0, m] == mp.share_of_patients_into_treatment*(1/mf.get_number_of_treatment_paths()) * gp.quicksum(c_dict[i, t - M_ij[i], n, m] for i in set_of_last_queues_in_diagnosis for n in range(N) if (t - M_ij[i]) >= 0))
+                            model.addConstr(q_dict[j, t, 0, m] == mp.share_of_patients_into_treatment * (1 / mf.get_number_of_treatment_paths()) * gp.quicksum(c_dict[i, t - M_ij[i], n, m] for i in set_of_last_queues_in_diagnosis for n in range(N) if (t - M_ij[i]) >= 0))
                         else:
-                            model.addConstr(q_dict[j, t, 0, m] == gp.quicksum(c_dict[i, t-M_ij[i], n, m] * Q_ij[i, j] for i in range(Queues, total_queues) for n in range(N) if (t - M_ij[i]) >= 0))
+                            model.addConstr(q_dict[j, t, 0, m] == gp.quicksum(G_jtnm[j, t, n, m] for n in range(N)) + gp.quicksum(c_dict[i, t - M_ij[i], n, m] * Q_ij[i, j] for i in range(total_treatment_queues, total_queues) for n in range(N) if (t - M_ij[i]) >= 0))
 
             else:
                 continue
@@ -165,7 +165,6 @@ def optimize_model(weeks, shift, with_rolling_horizon, reset):
             for t in range(1, Time_periods):
                 for n in range(1, N):
                     for m in range(1, M):
-
                         model.addConstr(q_dict[j, t, n, m] == q_dict[j, t - 1, n - 1, m - 1] - c_dict[j, t - 1, n - 1, m - 1])
 
         #Constriants ensuring that the number of serviced patients are equal to or less than then number of patients in the queue
@@ -173,6 +172,13 @@ def optimize_model(weeks, shift, with_rolling_horizon, reset):
             for t in range(Time_periods):
                 for n in range(N):
                     for m in range(M):
+                        #if j==18 and t==5 and n==0 and m==2:
+                        #    model.addConstr(c_dict[j, t, n, m] >= 2.6)
+                        #if j==17 and t==5 and n==0 and m==2:
+                        #    model.addConstr(c_dict[j, t, n, m] >= 2.6)
+                        #if j==5 and t==5 and n==1 and m==3:
+                        #    model.addConstr(c_dict[j, t, n, m] == 8)
+
                         model.addConstr(c_dict[j, t, n, m] <= q_dict[j, t, n, m])
 
         #Defining b_jt
@@ -184,13 +190,14 @@ def optimize_model(weeks, shift, with_rolling_horizon, reset):
         for j in range(total_queues):
             for t in range(Time_periods):
                 model.addConstr(w_dict[j, t] == gp.quicksum(q_dict[j, t, n, m] for n in range(N) for m in range(M)))
+
         #Resource constraints
         for t in range(Time_periods):
             for r in range(Resources):
                 model.addConstr(gp.quicksum(H_jr[j, r] * b_dict[j, t] for j in range(total_queues)) <=  L_rt[r, t % 7])
 
 
-
+        """
         #TODO: endre settet A til et sett A hvor aktivitenene er "fase-sluttende" aktiviteter
         for t in range(Time_periods):
             for g in range(Patient_processes):
@@ -203,16 +210,17 @@ def optimize_model(weeks, shift, with_rolling_horizon, reset):
                             for n in range(N):
                                 model.addConstr(q_dict[j, t, n, m] <= 0)
                                 pass
+        """
 
         #Shifting constraints
-        for j in range(Queues):
+        for j in range(total_queues):
             for t in range(Time_periods - shift):
                 model.addConstr(u_A_dict[j, t] - u_B_dict[j, t] == b_dict[j, t] - A_jt[j, t])
                 pass
 
         #The number of shifts must be below a value K
-        model.addConstr(gp.quicksum(u_A_dict[j, t] for j in range(Queues) for t in range(Time_periods)) <= K)
-        model.addConstr(gp.quicksum(u_B_dict[j, t] for j in range(Queues) for t in range(Time_periods)) <= K)
+        model.addConstr(gp.quicksum(u_A_dict[j, t] for j in range(total_queues) for t in range(Time_periods)) <= K)
+        model.addConstr(gp.quicksum(u_B_dict[j, t] for j in range(total_queues) for t in range(Time_periods)) <= K)
 
 
         #Printing the time it took to generate the constraints
@@ -297,13 +305,18 @@ def optimize_model(weeks, shift, with_rolling_horizon, reset):
     end_print = time.time()
     print("Printing:", end_print - start_print)
     mg.create_gantt_chart(Queues, Time_periods, mf.loadSolution("output/model_solution.sol")["b"])
+    for element in Q_ij:
+        val=Q_ij[element]
+        if val>0:
+            print(element,val)
 
 
 
 #Running the model
 def run_model():
-    optimize_model(weeks = 1, shift = 6, with_rolling_horizon = True, reset = False)
+    optimize_model(weeks = 1, shift = 6, with_rolling_horizon = True, reset = True)
     #shift = 0: Shifter ikke input-køene. Tar inn siste periode.
+
 
 run_model()
 
