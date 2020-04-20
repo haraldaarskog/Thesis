@@ -1,4 +1,5 @@
 import numpy as np
+import gurobipy as gp
 import pandas as pd
 import model_parameters as mp
 from datetime import datetime
@@ -162,7 +163,7 @@ def write_to_file(J,T,N,M,G,A,R,obj_value,n_variables,n_constraints,runtime):
 
 
 
-def calculate_rollover_serviced(J,T,N,M,c_dict, M_ij,shift):
+def calculate_rollover_serviced(J,T,N,M,c_variable, M_j,shift):
     sum=0
     for j in range(J):
         if is_last_queue_in_treatment(j):
@@ -170,10 +171,10 @@ def calculate_rollover_serviced(J,T,N,M,c_dict, M_ij,shift):
                 for n in range(N):
                     for m in range(M):
                         try:
-                            value = c_dict[j,t,n,m].x
+                            value = c_variable[j,t,n,m].x
                         except Exception as e:
                             continue
-                        delay=M_ij[j]
+                        delay=M_j[j]
                         if value > 0 and (t + delay) > shift:
                             mod = (t + delay) % shift
                             sum += value
@@ -227,13 +228,13 @@ def number_of_exit_patients(c_variable, shift):
             sum_exit_diagnosis += value
     return sum_exit_diagnosis, sum_exit_treatment
 
-def calculate_stats(J,D_jt,E_jnm,G_jtnm,shift):
+def calculate_stats(J,Patient_arrivals_jt,E_jnm,G_jtnm,shift):
     #antall initielt i kø
     sum_E=np.sum(E_jnm)
     #antall behandlede som kommer over en periode
     sum_G=np.sum(G_jtnm)
     #Antall innkommende pasienter
-    sum_D=np.sum(D_jt[:J])
+    sum_D=np.sum(Patient_arrivals_jt[:J])
     return sum_D,sum_E,sum_G
 
 
@@ -342,7 +343,7 @@ def find_ga(queue):
                     return r_t, c_t
 
 
-def create_M_ij():
+def create_M_j():
     m_dict={}
     Queues = get_total_number_of_queues()
     for i in range(Queues):
@@ -366,7 +367,7 @@ def get_number_of_treatment_paths():
     paths, activitites = mp.treatment_processes.shape
     return int(paths)
 
-def serviced_in_previous(J,T,N,M,shift,c_dict,Q_ij, M_ij):
+def serviced_in_previous(J,T,N,M,shift,c_variable,Q_ij, M_j):
     num=get_number_of_treatment_paths()
     arr=np.zeros((J,T,N,M))
     for i in range(J):
@@ -374,8 +375,8 @@ def serviced_in_previous(J,T,N,M,shift,c_dict,Q_ij, M_ij):
             for t in range(shift + 1):
                 for n in range(N):
                     for m in range(M):
-                        value=c_dict[i,t,n,m]
-                        delay=M_ij[i]
+                        value=c_variable[i,t,n,m]
+                        delay=M_j[i]
                         if value > 0 and Q_ij[i,j]==1 and (t+delay)>shift:
 
                             mod=(t+delay)%shift
@@ -402,10 +403,14 @@ def create_E_jnm(J, N, M, shift):
 
 
 
-
-
-
-
+def convert_dict(d):
+    new_d={}
+    for key in d:
+        try:
+            new_d[key] = d[key].x
+        except Exception as e:
+            continue
+    return new_d
 
 #OLD functions, can be used for later
 """
