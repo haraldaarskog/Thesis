@@ -15,9 +15,7 @@ start_initialization_time = time.time()
 
 #A function that runs the model
 #If with_rolling_horizon = True, input from the previous run is included
-#If reset = True, input from previous run is deleted
-#shift: number of days between running the model the last time and today. The number
-#of days that are already implemented
+#shift: number of days between running the model the last time and today
 def optimize_model(patient_processes, weeks, N_input, M_input, shift, with_rolling_horizon, in_iteration, weights):
 
 
@@ -66,7 +64,7 @@ def optimize_model(patient_processes, weeks, N_input, M_input, shift, with_rolli
     M_j = mf.create_M_j()
     H_jr = mp.H_jr
     L_rt = mp.L_rt
-    Time_limits_ga = mp.Time_limits_ga
+    Time_limits_j = mp.Time_limits_j
     K = mp.K
     Q_ij = mf.create_Q_ij()
 
@@ -104,7 +102,6 @@ def optimize_model(patient_processes, weeks, N_input, M_input, shift, with_rolli
         q_variable  =  model.addVars(total_queues, Time_periods, N, M, vtype = GRB.CONTINUOUS, lb = 0.0, ub = GRB.INFINITY, name = "q")
 
         b_variable = model.addVars(total_queues, Time_periods, vtype = GRB.CONTINUOUS, lb = 0.0, ub = GRB.INFINITY, name = "b")
-        #x_dict = model.addVars(Time_periods, M, Patient_processes, Activities, vtype = GRB.BINARY, lb = 0.0, ub = GRB.INFINITY, name = "x")
 
         u_A_variable = model.addVars(total_queues, Time_periods, vtype = GRB.CONTINUOUS, lb = 0.0, ub = GRB.INFINITY, name = "u_A")
         u_B_variable = model.addVars(total_queues, Time_periods, vtype = GRB.CONTINUOUS, lb = 0.0, ub = GRB.INFINITY, name = "u_B")
@@ -143,7 +140,8 @@ def optimize_model(patient_processes, weeks, N_input, M_input, shift, with_rolli
         #******************** Constraints ********************
 
         start_constraints = time.time()
-        #Updating queues whith serviced patients/patients
+
+        #Updating queues whith serviced patients
         for j in range(total_queues):
             if j < current_diagnosis_queues:
                 for t in range(Time_periods):
@@ -193,21 +191,15 @@ def optimize_model(patient_processes, weeks, N_input, M_input, shift, with_rolli
             for r in range(Resources):
                 model.addConstr(gp.quicksum(H_jr[j, r] * b_variable[j, t] for j in range(total_queues)) <=  L_rt[r, t % 7])
 
-
-        """
-        #TODO: endre settet A til et sett A hvor aktivitenene er "fase-sluttende" aktiviteter
-        for t in range(Time_periods):
-            for g in range(Patient_processes):
-                for a in range(Activities):
-                    j = mf.find_queue(g, a)
-                    if j == -1:
-                        continue
+        #Time limit constraints
+        for j in range(total_queues):
+            for t in range(Time_periods):
+                for n in range(N):
                     for m in range(M):
-                        if m > Time_limits_ga[g, a]:
-                            for n in range(N):
-                                model.addConstr(q_variable[j, t, n, m] <= 0)
-                                pass
-        """
+                        if m > Time_limits_j[j]:
+                            model.addConstr(q_variable[j, t, n, m] <= 0)
+
+
 
         #Shifting constraints
         for j in range(total_queues):
@@ -256,9 +248,6 @@ def optimize_model(patient_processes, weeks, N_input, M_input, shift, with_rolli
         print("\n")
         print(colored("b(j, t)", 'green', attrs = ['underline']))
         mf.variable_printer("b", b_variable)
-        #print("\n")
-        #print(colored("x(t, m, g, a)", 'green', attrs = ['underline']))
-        #mf.variable_printer("x", x_dict)
         print("\n")
         print(colored("u_A(j, t)", 'green', attrs = ['underline']))
         mf.variable_printer("u_A", u_A_variable)
@@ -313,8 +302,6 @@ def optimize_model(patient_processes, weeks, N_input, M_input, shift, with_rolli
 #Running the model
 def run_model():
     optimize_model(patient_processes = 1, weeks = 1, N_input = 15, M_input = 15, shift = 6, with_rolling_horizon = False, in_iteration = False, weights = 0)
-    #shift = 0: Shifter ikke input-køene. Tar inn siste periode.
-
 
 if __name__ == '__main__':
     run_model()

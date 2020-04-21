@@ -28,7 +28,7 @@ def optimize_model(weeks, N, M, with_rolling_horizon, reset, obj_weights, shift)
 
     number_of_current_queues = Queues + total_treatment_queues
 
-    set_of_last_queues_in_diagnosis=mf.generate_last_queues_in_diagnosis()
+    set_of_last_queues_in_diagnosis = mf.generate_last_queues_in_diagnosis()
 
     Time_periods = 7 * weeks
 
@@ -74,7 +74,6 @@ def optimize_model(weeks, N, M, with_rolling_horizon, reset, obj_weights, shift)
         q_dict  =  model.addVars(total_queues, Time_periods, N, M, vtype = GRB.CONTINUOUS, lb = 0.0, ub = GRB.INFINITY, name = "q")
 
         b_dict = model.addVars(total_queues, Time_periods, vtype = GRB.CONTINUOUS, lb = 0.0, ub = GRB.INFINITY, name = "b")
-        w_dict = model.addVars(total_queues, Time_periods, vtype = GRB.CONTINUOUS, lb = 0.0, ub = GRB.INFINITY, name = "w")
 
         #x_dict = model.addVars(Time_periods, M, Patient_processes, Activities, vtype = GRB.BINARY, lb = 0.0, ub = GRB.INFINITY, name = "x")
 
@@ -150,11 +149,6 @@ def optimize_model(weeks, N, M, with_rolling_horizon, reset, obj_weights, shift)
         for j in range(total_queues):
             for t in range(Time_periods):
                 model.addConstr(b_dict[j, t] == gp.quicksum(c_dict[j, t, n, m] for n in range(N) for m in range(M)))
-
-
-        for j in range(total_queues):
-            for t in range(Time_periods):
-                model.addConstr(w_dict[j, t] == gp.quicksum(q_dict[j, t, n, m] for n in range(N) for m in range(M)))
 
         #Resource constraints
         for t in range(Time_periods):
