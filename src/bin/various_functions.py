@@ -41,3 +41,18 @@ def return_Q_ij(i,j):
     else:
         return 0
 """
+
+"""
+elif j >= total_queues - total_treatment_queues:
+    for t in range(Time_periods):
+        for m in range(M):
+            if t == 0 and m >= 1:
+                for n in range(N):
+                    model.addConstr(q_variable[j, t, n, m] == E_jnm[j, n, m] + G_jtnm[j, t, n, m])
+            elif mf.is_first_queue_in_treatment(j):
+                model.addConstr(q_variable[j, t, 0, m] == mp.share_of_patients_into_treatment * mp.probability_of_path[g, p] * gp.quicksum(c_variable[i, t - M_j[i], n, m] for i in set_of_last_queues_in_diagnosis for n in range(N) if (t - M_j[i]) >= 0))
+            else:
+                model.addConstr(q_variable[j, t, 0, m] == gp.quicksum(G_jtnm[j, t, n, m] for n in range(N)) + gp.quicksum(c_variable[i, t - M_j[i], n, m] * Q_ij[i, j] for i in range(total_treatment_queues, total_queues) for n in range(N) if (t - M_j[i]) >= 0))
+else:
+    continue
+"""

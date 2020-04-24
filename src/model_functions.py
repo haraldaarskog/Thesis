@@ -6,44 +6,30 @@ from datetime import datetime
 import re
 import sys
 
-patient_processes=mp.patient_processes
-activity_dict=mp.activity_dict
+diagnostic_processes = mp.diagnostic_processes
 
-output_file="output/model_solution.sol"
-
-def number_of_queues(number_of_patient_processes):
-    if number_of_patient_processes>patient_processes.shape[0]:
+def number_of_queues(number_of_diagnostic_processes):
+    if number_of_diagnostic_processes > diagnostic_processes.shape[0]:
         raise ValueError("There are not defined that much patient processes.")
-    sum=0
-    for i in range(number_of_patient_processes):
-        sum+=patient_processes[i][:].sum()
+    sum = 0
+    for i in range(number_of_diagnostic_processes):
+        sum += diagnostic_processes[i][:].sum()
     return int(sum)
 
 def find_queue(patient_pro,activity):
-    if patient_processes[patient_pro, activity]==0:
+    if diagnostic_processes[patient_pro, activity] == 0:
         return -1
-    rows,cols=patient_processes.shape
-    sum=-1
+    rows,cols=diagnostic_processes.shape
+    sum = -1
     for p in range(rows):
         for a in range(cols):
-            if patient_processes[p,a]==1:
-                sum+=1
-            if patient_pro==p and activity == a:
+            if diagnostic_processes[p,a] == 1:
+                sum += 1
+            if patient_pro == p and activity == a:
                 return sum
     return None
 
-def variable_printer(var_name, dict):
 
-    for key in dict:
-
-        value = dict[key]
-        try:
-            value = value.x
-        except Exception as e:
-            continue
-
-        if value > 0.001:
-            print('%s%s = %3.2f' % (var_name, key, value))
 
 #returns dict. very nice
 def loadSolution(file_name):
@@ -66,13 +52,13 @@ def loadSolution(file_name):
     return res_dict
 
 def shift_solution(d, shift):
-    d_new={}
+    d_new = {}
     for key in d:
-        j=key[0]
-        old_t=key[1]
-        if old_t>=shift:
-            new_t=old_t-shift
-            d_new[(j,new_t)] = d[key]
+        j = key[0]
+        old_t = key[1]
+        if old_t >= shift:
+            new_t = old_t - shift - 1
+            d_new[(j, new_t)] = d[key]
     return d_new
 
 
@@ -103,23 +89,11 @@ def from_dict_to_matrix(d):
 def old_solution(file, variable, shift):
     d=loadSolution(file)[variable]
     if shift > 0:
-        d=shift_solution(d,shift)
-    array=from_dict_to_matrix(d)
+        d = shift_solution(d,shift)
+    array = from_dict_to_matrix(d)
     return array
 
-def print_patient_process(g):
-    path=patient_processes[g][:]
-    str=""
-    for i in range(len(path)):
-        if path[i]==1:
-            str+=activity_dict[i]+" -> "
-    print(str[:-4])
 
-def all_print_patient_processes(G):
-    print("Patient processes:")
-    for g in range(G):
-        print(str(g)+":",end=" ")
-        print_patient_process(g)
 
 
 def update_queue(j,n,m, number_of_patients, queue):
@@ -163,25 +137,6 @@ def write_to_file(J,T,N,M,G,A,R,obj_value,n_variables,n_constraints,runtime):
 
 
 
-def calculate_rollover_serviced(J,T,N,M,c_variable, M_j,shift):
-    sum=0
-    for j in range(J):
-        if is_last_queue_in_treatment(j):
-            for t in range(T):
-                for n in range(N):
-                    for m in range(M):
-                        try:
-                            value = c_variable[j,t,n,m].x
-                        except Exception as e:
-                            continue
-                        delay=M_j[j]
-                        if value > 0 and (t + delay) > shift:
-                            mod = (t + delay) % shift
-                            sum += value
-    return sum
-
-
-
 
 
 
@@ -203,7 +158,7 @@ def check_activity(a1,a2,g):
 
 def is_last_queue_in_diagnosis(j):
     sum1=-1
-    for row in mp.patient_processes:
+    for row in mp.diagnostic_processes:
         sum1+=sum(row)
         if j==sum1:
             return True
@@ -226,15 +181,22 @@ def number_of_exit_patients(c_variable, shift):
             sum_exit_treatment += value
         elif value > 0 and is_last_queue_in_diagnosis(queue):
             sum_exit_diagnosis += value
+    sum_exit_diagnosis = np.around(sum_exit_diagnosis, decimals = 2)
+    sum_exit_treatment = np.around(sum_exit_treatment, decimals = 2)
+
     return sum_exit_diagnosis, sum_exit_treatment
 
 def calculate_stats(J,Patient_arrivals_jt,E_jnm,G_jtnm,shift):
     #antall initielt i kø
     sum_E=np.sum(E_jnm)
+    sum_E = np.around(sum_E, decimals=2)
     #antall behandlede som kommer over en periode
     sum_G=np.sum(G_jtnm)
+    sum_G = np.around(sum_G, decimals=2)
     #Antall innkommende pasienter
     sum_D=np.sum(Patient_arrivals_jt[:J])
+    sum_D = np.around(sum_D, decimals=2)
+
     return sum_D,sum_E,sum_G
 
 
@@ -248,7 +210,7 @@ def get_min_capacity(j, T, R):
     return min_val
 
 def is_first_queue_in_treatment(j):
-    sum1=np.sum(mp.patient_processes)
+    sum1=np.sum(mp.diagnostic_processes)
     for row in mp.treatment_processes:
         if j==sum1:
             return True
@@ -256,7 +218,7 @@ def is_first_queue_in_treatment(j):
     return False
 
 def get_total_number_of_diagnosis_queues():
-    return np.sum(mp.patient_processes)
+    return np.sum(mp.diagnostic_processes)
 
 def get_total_number_of_treatment_queues():
     return np.sum(mp.treatment_processes)
@@ -316,11 +278,91 @@ def queue_is_treatment(j):
     return False
 
 
+
+
+
+
+
+
+
+
+def generate_last_queues_in_diagnosis():
+    queue_set=set()
+    for j in range(get_total_number_of_diagnosis_queues()):
+        if is_last_queue_in_diagnosis(j):
+            queue_set.add(j)
+    return queue_set
+
+
+def get_number_of_treatment_paths():
+    paths, activitites = mp.treatment_processes.shape
+    return int(paths)
+
+
+def calculate_rollover_service(J, T, N, M, shift, c_variable, Q_ij, M_j):
+    num=get_number_of_treatment_paths()
+    arr=np.zeros((J, T, N, M))
+    for i in range(J):
+        for j in range(J):
+            for t in range(shift + 1):
+                for n in range(N):
+                    for m in range(M):
+                        value = c_variable[i, t, n, m]
+                        delay = M_j[i]
+                        if value > 0 and Q_ij[i, j] == 1 and (t + delay) > shift:
+                            mod = ((t + delay) % shift) - 1
+                            arr[j, mod, 0, m] = arr[j, mod, 0, m] + value
+                        elif value > 0 and is_last_queue_in_diagnosis(i) and is_first_queue_in_treatment(j) and (t + delay) > shift:
+                            mod = ((t + delay) % shift) - 1
+                            arr[j, mod, 0, m] = arr[j, mod, 0, m] + value / num
+    return arr
+
+
+def create_E_jnm(J, N, M, shift, sol_file_name):
+    E_jnm = old_solution(sol_file_name, "q", 0)[:, shift, :, :]
+    old_c = old_solution(sol_file_name, "c", 0)[:, shift, :, :]
+    new_array=np.zeros((J,N,M))
+    for j in range(J):
+        for n in range(N):
+            for m in range(M):
+                value_q = E_jnm[j, n, m]
+                value_c = old_c[j, n, m]
+                if value_q > 0.0001:
+                    new_array[j, n + 1, m + 1] = value_q - value_c
+    return new_array
+
+
+
+def convert_dict(d):
+    new_d = {}
+    for key in d:
+        try:
+            new_d[key] = d[key].x
+        except Exception as e:
+            continue
+    return new_d
+
+
+def print_resource_utilization(J, T, b_jt):
+    number_of_resources = mp.L_rt.shape[0]
+    for r in range(number_of_resources):
+        for t in range(T):
+            sum = 0
+            for j in range(J):
+                try:
+                    sum += b_jt[j, t] * mp.H_jr[j, r]
+                except Exception as e:
+                    continue
+            if sum > 0:
+                print("r("+str(r)+","+str(t)+") =",sum)
+
+
+
 def find_ga(queue):
     if queue >= get_total_number_of_queues():
         print("Error!!!")
         sys.exit()
-    pp = mp.patient_processes
+    pp = mp.diagnostic_processes
     tp = mp.treatment_processes
     rows_pp,cols_pp = pp.shape
     rows_tp,cols_tp = tp.shape
@@ -342,6 +384,13 @@ def find_ga(queue):
                 if count == queue:
                     return r_t, c_t
 
+def create_queue_to_path(total_queues):
+    path_dict = {}
+    for j in range(total_queues):
+        g, a = find_ga(j)
+        path_dict[j] = g
+    return path_dict
+
 
 def create_M_j():
     m_dict={}
@@ -355,59 +404,36 @@ def create_M_j():
     return m_dict
 
 
-def generate_last_queues_in_diagnosis():
-    queue_set=set()
-    for j in range(get_total_number_of_diagnosis_queues()):
-        if is_last_queue_in_diagnosis(j):
-            queue_set.add(j)
-    return queue_set
-
-
-def get_number_of_treatment_paths():
-    paths, activitites = mp.treatment_processes.shape
-    return int(paths)
-
-def serviced_in_previous(J,T,N,M,shift,c_variable,Q_ij, M_j):
-    num=get_number_of_treatment_paths()
-    arr=np.zeros((J,T,N,M))
-    for i in range(J):
-        for j in range(J):
-            for t in range(shift + 1):
-                for n in range(N):
-                    for m in range(M):
-                        value=c_variable[i,t,n,m]
-                        delay=M_j[i]
-                        if value > 0 and Q_ij[i,j]==1 and (t+delay)>shift:
-
-                            mod=(t+delay)%shift
-                            arr[j,mod,n,m]=value
-                        elif value > 0 and is_last_queue_in_diagnosis(i) and is_first_queue_in_treatment(j) and (t+delay)>shift:
-
-                            mod = (t+delay)%shift
-                            arr[j,mod,n,m]=value/num
-    return arr
-
-
-def create_E_jnm(J, N, M, shift):
-    E_jnm = old_solution("output/model_solution.sol", "q", 0)[:, shift, :, :]
-    old_c = old_solution("output/model_solution.sol", "c", 0)[:, shift, :, :]
-    new_array=np.zeros((J,N,M))
-    for j in range(J):
-        for n in range(N):
-            for m in range(M):
-                value_q = E_jnm[j,n,m]
-                value_c = old_c[j,n,m]
-                if value_q > 0.0001:
-                    new_array[j, n + 1, m + 1] = value_q - value_c
-    return new_array
-
-
-
-def convert_dict(d):
-    new_d={}
-    for key in d:
+def calculate_discharged_patients(c_variable):
+    discharge_sum = 0
+    for key in c_variable:
+        value = c_variable[key]
         try:
-            new_d[key] = d[key].x
+            value=value.x
         except Exception as e:
             continue
-    return new_d
+
+        queue=key[0]
+        time=key[1]
+        if value > 0 and is_last_queue_in_diagnosis(queue):
+            g, _ = find_ga(queue)
+            discharge_share = 1 - np.sum(mp.probability_of_path[g,:])
+            if discharge_share < 0:
+                print("Discharge share is negative.")
+                sys.exit()
+            discharge_sum += discharge_share * value
+    return discharge_sum
+
+
+def create_K_parameter(start_value, increase_per_week, time_periods):
+    k_dict = {}
+    value = start_value
+    increase_per_week = increase_per_week
+    for t in range(time_periods):
+        if t % 7 == 0 and t > 0:
+            value = value * (1 + increase_per_week)
+        k_dict[t] = value
+    return k_dict
+
+if __name__ == '__main__':
+    create_K_parameter(10,0.5,20)
