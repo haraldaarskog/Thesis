@@ -65,7 +65,7 @@ def optimize_model(diagnostic_processes, weeks, N_input, M_input, shift, with_ro
     H_jr = mp.H_jr
     L_rt = mp.L_rt
     Time_limits_j = mp.Time_limits_j
-    K_t = mf.create_K_parameter(start_value = 100, increase_per_week = 0.5, time_periods = Time_periods)
+    K_t = mf.create_K_parameter(start_value = 10, increase_per_week = 0.5, time_periods = Time_periods)
     Q_ij = mf.create_Q_ij()
     queue_to_path = mf.create_queue_to_path(total_queues)
     probability_of_path = mp.probability_of_path
@@ -95,7 +95,7 @@ def optimize_model(diagnostic_processes, weeks, N_input, M_input, shift, with_ro
         model = gp.Model("mip_queue_model")
 
         #surpressing gurobi output
-        model.setParam("OutputFlag", 0)
+        #model.setParam("OutputFlag", 0)
 
         #******************** Variables ********************
         start_variables = time.time()
@@ -105,8 +105,8 @@ def optimize_model(diagnostic_processes, weeks, N_input, M_input, shift, with_ro
 
         b_variable = model.addVars(total_queues, Time_periods, vtype = GRB.INTEGER, lb = 0.0, ub = GRB.INFINITY, name = "b")
 
-        u_A_variable = model.addVars(total_queues, Time_periods - shift, vtype = GRB.CONTINUOUS, lb = 0.0, ub = GRB.INFINITY, name = "u_A")
-        u_R_variable = model.addVars(total_queues, Time_periods - shift, vtype = GRB.CONTINUOUS, lb = 0.0, ub = GRB.INFINITY, name = "u_R")
+        u_A_variable = model.addVars(total_queues, Time_periods, vtype = GRB.CONTINUOUS, lb = 0.0, ub = GRB.INFINITY, name = "u_A")
+        u_R_variable = model.addVars(total_queues, Time_periods, vtype = GRB.CONTINUOUS, lb = 0.0, ub = GRB.INFINITY, name = "u_R")
 
         model.update()
 
@@ -219,9 +219,9 @@ def optimize_model(diagnostic_processes, weeks, N_input, M_input, shift, with_ro
 
 
         #The number of shifts must be below a value K
-        model.addConstr(gp.quicksum(u_A_variable[j, t] for j in range(total_queues) for t in range(Time_periods - shift)) <= K_t[t])
-
-        model.addConstr(gp.quicksum(u_R_variable[j, t] for j in range(total_queues) for t in range(Time_periods - shift)) <= K_t[t])
+        for t in range(Time_periods - shift):
+            model.addConstr(gp.quicksum(u_A_variable[j, t] for j in range(total_queues)) <= K_t[t])
+            model.addConstr(gp.quicksum(u_R_variable[j, t] for j in range(total_queues)) <= K_t[t])
 
         #Printing the time it took to generate the constraints
         end_constraints = time.time()
@@ -229,7 +229,7 @@ def optimize_model(diagnostic_processes, weeks, N_input, M_input, shift, with_ro
             print("Generating constraints:", end_constraints - start_constraints)
             print("\n")
         #******************** Optimize model ********************
-
+        print("Optimizing model...")
         model.optimize()
         status = model.status
         runtime = model.runtime
@@ -248,18 +248,11 @@ def optimize_model(diagnostic_processes, weeks, N_input, M_input, shift, with_ro
         #model.write("/Users/haraldaarskog/GoogleDrive/Masteroppgave/Git/Thesis/src/output/model.lp")
         model.write(sol_file_name)
 
-
         number_of_constraints = len(model.getConstrs())
-
-
 
         number_of_variables = len(model.getVars())
 
-
-
-
         sum_exit_diagnosis, sum_exit_treatment = mf.number_of_exit_patients(c_variable, shift)
-
 
 
         #tar noe tid
@@ -299,34 +292,7 @@ def optimize_model(diagnostic_processes, weeks, N_input, M_input, shift, with_ro
 
 #Running the model
 def run_model():
-    optimize_model(diagnostic_processes = 5, weeks = 3, N_input = 20, M_input = 20, shift = 6, with_rolling_horizon = False, in_iteration = False, weights = 0)
+    optimize_model(diagnostic_processes = 3, weeks = 12, N_input = 20, M_input = 20, shift = 83, with_rolling_horizon = False, in_iteration = False, weights = 0)
 
 if __name__ == '__main__':
     run_model()
-
-
-"""
-shifter PÅ dagen shift
-shift = 3
-Dag 0 - yes. t = 0
-Dag 1 - yes. t = 1
-Dag 2 - yes. t = 2
-Dag 3 - yes. t = 3. Kjører modellen på nytt etter dagen er implementert.
-Dag 4 - t = 1
-Dag 5 - t = 2
-Dag 6 - t = 3
-
-"""
-
-"""
-shifter etter shift antall dager
-shift = 3
-Dag 0 - yes. t = 0
-Dag 1 - yes. t = 1
-Dag 2 - yes. Kjører modellen på nytt etter dagen er implementert. t = 2
-Dag 3 - ny periode. t = 0
-Dag 4 - t = 1
-Dag 5 - t = 2
-Dag 6 - t = 3
-
-"""
