@@ -24,18 +24,15 @@ def optimize_ga(weights):
 problem = structure()
 #problem.costfunc = sphere
 problem.costfunc = optimize_ga
-problem.nvar = M
-problem.varmin = np.zeros(M)
-problem.varmax = np.full(M, 100)
+problem.nvar = (number_of_queues, M)
+problem.varmin = np.zeros((number_of_queues, M))
+problem.varmax = np.full((number_of_queues, M), 1)
 
 # GA Parameters
 params = structure()
-params.maxit = 5
-params.npop = 5
-params.beta = 1
-params.pc = 1
-params.gamma = 0.1 # En høyere gamma-verdi, gir større variasjon i uniformfordelingen ved crossover.-->
-params.mu = 0.3
+params.maxit = 20
+params.npop = 10
+params.mu = 0.5
 params.sigma = 0.1
 
 # Run GA

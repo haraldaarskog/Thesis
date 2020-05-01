@@ -1,5 +1,6 @@
 import numpy as np
 from ypstruct import structure
+import sys
 
 def run(problem, params):
 
@@ -13,9 +14,7 @@ def run(problem, params):
     maxit = params.maxit
     npop = params.npop
     beta = params.beta
-    pc = params.pc
-    nc = int(np.round(pc*npop/2)*2)
-    gamma = params.gamma
+    nc = int(np.round(npop/2)*2)
     mu = params.mu
     sigma = params.sigma
 
@@ -38,9 +37,11 @@ def run(problem, params):
         if pop[i].cost > bestsol.cost:
             bestsol = pop[i].deepcopy()
             bestsol.values = pop[i].values
-            print("Initialization: Best Cost = {}".format(bestsol.cost))
+            print("Initialization: Best score = {}".format(bestsol.cost))
     # Best Cost of Iterations
     bestcost = np.empty(maxit)
+
+    print("Initialization complete")
 
     # Main Loop
     for it in range(maxit):
@@ -104,14 +105,14 @@ def run(problem, params):
         bestcost[it] = bestsol.cost
 
         # Show Iteration Information
-        print("Iteration {}: Best Cost = {}".format(it, bestcost[it]))
+        print("Iteration {}: Best score = {}".format(it, bestcost[it]))
 
     # Output
     out = structure()
     out.pop = pop
     out.bestsol = bestsol
     out.bestcost = bestcost
-    print(bestsol.values)
+    #print(bestsol.values)
     return out
 
 def crossover(p1, p2):
@@ -130,7 +131,8 @@ def mutate(x, mu, sigma):
     flag = np.random.rand(*x.values.shape) <= mu
     ind = np.argwhere(flag)
     i_shape = ind.shape
-    y.values[ind] += sigma*np.random.randn(*i_shape)
+    for i in ind:
+        y.values[tuple(i)] += sigma*np.random.rand()
     return y
 
 def apply_bound(x, varmin, varmax):
@@ -142,3 +144,14 @@ def roulette_wheel_selection(p):
     r = sum(p)*np.random.rand()
     ind = np.argwhere(r <= c)
     return ind[0][0]
+
+
+"""
+a = arr.shape
+print(len(a))
+print(a, *a)
+print(np.random.randn(*a))
+arr = np.array([
+[1.,2.,3.],
+[4.,5.,6.]])
+"""
