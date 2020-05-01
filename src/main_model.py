@@ -95,7 +95,7 @@ def optimize_model(diagnostic_processes, weeks, N_input, M_input, shift, with_ro
         model = gp.Model("mip_queue_model")
 
         #surpressing gurobi output
-        #model.setParam("OutputFlag", 0)
+        model.setParam("OutputFlag", 0)
 
         #******************** Variables ********************
         start_variables = time.time()
@@ -137,7 +137,7 @@ def optimize_model(diagnostic_processes, weeks, N_input, M_input, shift, with_ro
         if not in_iteration:
             model.setObjective(gp.quicksum(mof.obj_weights_m(j, m) * q_variable[j, t, n, m]  for j in range(total_queues) for t in range(Time_periods) for n in range(N) for m in range(M)), GRB.MINIMIZE)
         else:
-            model.setObjective(gp.quicksum(weights[j, n] * q_variable[j, t, n, m]  for j in range(total_queues) for t in range(Time_periods) for n in range(N) for m in range(M)), GRB.MINIMIZE)
+            model.setObjective(gp.quicksum(weights[m] * q_variable[j, t, n, m]  for j in range(total_queues) for t in range(Time_periods) for n in range(N) for m in range(M)), GRB.MINIMIZE)
 
         #******************** Constraints ********************
 
@@ -173,7 +173,7 @@ def optimize_model(diagnostic_processes, weeks, N_input, M_input, shift, with_ro
                 continue
 
 
-        print("Cons1 total:", time.time()-start_constraints)
+        #print("Cons1 total:", time.time()-start_constraints)
 
 
 
@@ -214,12 +214,12 @@ def optimize_model(diagnostic_processes, weeks, N_input, M_input, shift, with_ro
 
         #Shifting constraints
         for j in range(total_queues):
-            for t in range(Time_periods - shift - 1):
+            for t in range(Time_periods):
                 model.addConstr(u_A_variable[j, t] - u_R_variable[j, t] == b_variable[j, t] - A_jt[j, t])
 
 
         #The number of shifts must be below a value K
-        for t in range(Time_periods - shift):
+        for t in range(Time_periods):
             model.addConstr(gp.quicksum(u_A_variable[j, t] for j in range(total_queues)) <= K_t[t])
             model.addConstr(gp.quicksum(u_R_variable[j, t] for j in range(total_queues)) <= K_t[t])
 
@@ -228,8 +228,9 @@ def optimize_model(diagnostic_processes, weeks, N_input, M_input, shift, with_ro
         if not in_iteration == True:
             print("Generating constraints:", end_constraints - start_constraints)
             print("\n")
+            print("Optimizing model...")
         #******************** Optimize model ********************
-        print("Optimizing model...")
+
         model.optimize()
         status = model.status
         runtime = model.runtime
@@ -241,6 +242,8 @@ def optimize_model(diagnostic_processes, weeks, N_input, M_input, shift, with_ro
         print('Error code ' + str(e.errno) + ': ' + str(e))
 
 
+    sum_exit_diagnosis, sum_exit_treatment = mf.number_of_exit_patients(c_variable, shift)
+    discharged = mf.calculate_discharged_patients(c_variable)
     if not in_iteration == True:
         start_print = time.time()
         mop.print_variables(q_variable, c_variable, b_variable, u_A_variable, u_R_variable)
@@ -252,7 +255,6 @@ def optimize_model(diagnostic_processes, weeks, N_input, M_input, shift, with_ro
 
         number_of_variables = len(model.getVars())
 
-        sum_exit_diagnosis, sum_exit_treatment = mf.number_of_exit_patients(c_variable, shift)
 
 
         #tar noe tid
@@ -277,7 +279,7 @@ def optimize_model(diagnostic_processes, weeks, N_input, M_input, shift, with_ro
         rollover_service_next_period = np.sum(mf.calculate_rollover_service(total_queues, Time_periods, N, M, shift, c_jtnm_current, Q_ij, M_j))
         rollover_service_next_period = np.around(rollover_service_next_period, decimals=2)
 
-        discharged = mf.calculate_discharged_patients(c_variable)
+
 
         mop.create_overview_table(new_patient_arrivals, sum_E, sum_G, sum_exit_diagnosis, sum_exit_treatment, rollover_queue_next_period, rollover_service_next_period, discharged)
         #Outputing the time it took to print results and write to file
@@ -287,12 +289,15 @@ def optimize_model(diagnostic_processes, weeks, N_input, M_input, shift, with_ro
 
     b_variable = mf.convert_dict(b_variable)
     q_variable = mf.convert_dict(q_variable)
-    return q_variable, b_variable
+    #mop.print_resource_utilization(total_queues, Time_periods,b_variable)
+    #print(discharged + sum_exit_treatment)
+    return q_variable, b_variable, model.objVal, discharged, sum_exit_treatment
 
 
 #Running the model
 def run_model():
-    optimize_model(diagnostic_processes = 3, weeks = 12, N_input = 20, M_input = 20, shift = 83, with_rolling_horizon = False, in_iteration = False, weights = 0)
+    weights = [13.44461476, 48.82461693, 80.29788673, 35.88345536, 63.90958627, 69.1476366,80.07327896, 46.27973288, 59.56845895, 81.26770961]
+    optimize_model(diagnostic_processes = 2, weeks = 2, N_input = 10, M_input = 10, shift = 13, with_rolling_horizon = False, in_iteration = True, weights = weights)
 
 if __name__ == '__main__':
     run_model()

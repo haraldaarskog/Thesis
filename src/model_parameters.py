@@ -5,7 +5,7 @@ import numpy as np
 diagnosis_activity_dict={
 0:"Referral",
 1:"Gynecological investigation",
-2:"Biopsi",
+2:"Biopsy",
 3:"CT",
 4:"MRI",
 5:"MDT",
@@ -39,9 +39,9 @@ diagnostic_processes = np.array([
         [1,0,0,0,0,1,1]]) #Eggstokk. Start: 10
 
 treatment_processes = np.array([
-        [0,1,0,0],
+        [1,1,0,0],
         [0,0,0,1],
-        [1,1,0,0]])
+        [0,1,0,0]])
 
 #recovery time after activity 0-5
 diagnosis_recovery_times = np.array([1,1,1,1,1,1,1])
@@ -63,8 +63,8 @@ activity_resource_map = np.array([
 #probability of patients in in process i follows treatment path j. G x T
 #Does not have to equal 1? Or last treatment is
 probability_of_path = np.array([
-        [1,0,0],
-        [1/3,2/3,0],
+        [0.8,0,0],
+        [1/3,1/3,0],
         [0,0,1]])
 
 
@@ -91,7 +91,7 @@ Patient_arrivals_jt=np.matrix([
         [0,0,0,0,0,0,0]])
 
 #Max number of days allowed before activity a
-Time_limits_j=np.array([100,6,100,16,100,6,100,100,100,16,100,6,16,100,100,100,100,100,100,100,100,100,100,100,100,100])
+Time_limits_j=np.array([100,6,100,22,100,6,100,100,100,22,100,6,22,100,100,100,100,100,100,100,100,100,100,100,100,100])
 
 #Resource capacity for resource r at day t in a week
 L_rt=np.array([
@@ -111,16 +111,16 @@ H_jr=np.array([
         [0,0,0,0,0,0,0,0,0,0],#
         [0,1,0,0,0,0,0,0,0,0],
         [0,0,1,0,0,0,0,0,0,0],
+        [0,0,0,1,0,0,0,0,0,0],
         [0,0,0,0,0,0,0,0,0,0],#
         [0,1,0,0,0,0,0,0,0,0],
         [0,0,1,0,0,0,0,0,0,0],
         [0,0,0,1,0,0,0,0,0,0],
+        [0,0,0,0,1,0,0,0,0,0],
+        [0,0,0,0,0,1,0,0,0,0],
         [0,0,0,0,0,0,0,0,0,0],#
-        [0,1,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0],#
-        [0,1,0,0,0,0,0,0,0,0],
-        [0,0,1,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0],#
+        [0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0],
         [0,1,0,0,0,0,0,0,0,0],
         [0,0,1,0,0,0,0,0,0,0],
         [0,0,0,1,0,0,0,0,0,0],

@@ -103,7 +103,7 @@ def calculate_m(J, T, s, access_time_performance, alpha, epsilon, old_m):
 
 def run_optimization(alpha, J, weeks, N, M, current_diagnosis_queues, obj_weights):
     #q_variables, b_variables = mi.optimize_model(weeks, N, M, True, True, obj_weights, 6)
-    q_variables, b_variables = mm.optimize_model(1, weeks, N, M, 6, False, True, obj_weights)
+    q_variables, b_variables, _ = mm.optimize_model(1, weeks, N, M, 6, False, True, obj_weights)
 
 
     access_time = calculate_access_time(q_variables, J, weeks * 7, N, M, alpha, current_diagnosis_queues)
