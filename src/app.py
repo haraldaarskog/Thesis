@@ -26,8 +26,8 @@ problem.varmax = np.full(M, 1)
 
 # GA Parameters
 params = structure()
-params.maxit = 5
-params.npop = 5
+params.maxit = 2
+params.npop = 4
 params.mu = 0.5
 params.sigma = 0.5
 
@@ -45,12 +45,14 @@ out = ga.run(problem, params)
 
 
 y = out.ch
-x = np.arange(0.5, params.maxit, step=params.maxit/len(out.ch))
+y = np.insert(y, 0, out.bestcost[0])
+x = np.arange(0, params.maxit + params.maxit/len(out.ch), step=params.maxit/len(out.ch))
+
 plt.plot(out.bestcost)
 plt.plot(x, y, marker='o', linestyle='--', color='r', label='Square')
+plt.xlim(0, params.maxit + params.maxit/len(out.ch))
 """
 plt.plot(out.ch)
-plt.xlim(0, 2*params.maxit)
 plt.xticks(np.arange(0, params.maxit, step=0.5))
 """
 plt.xlabel('Iterations')
