@@ -48,19 +48,17 @@ y = out.ch
 y_b = out.ch_b
 y = np.insert(y, 0, out.bestcost[0])
 y_b = np.insert(y_b, 0, out.bestcost[0])
-print(y_b)
 x = np.arange(0, params.maxit + params.maxit/len(out.ch), step=params.maxit/len(out.ch))
 
-plt.plot(x, y, linestyle='-', color='b', label='Square')
-#plt.plot(out.bestcost, marker='o', linestyle='--', color='r', label='Square')
-plt.plot(x, y_b, marker='o', linestyle='--', color='r', label='Square')
+plt.plot(x, y, linestyle='-', color='b', label='Value of children')
+plt.plot(x, y_b, linestyle='--', color='r', label='Best value')
 plt.xlim(0, params.maxit)
-"""
-plt.plot(out.ch)
-plt.xticks(np.arange(0, params.maxit, step=0.5))
-"""
 plt.xlabel('Iterations')
 plt.ylabel('Values')
+plt.legend()
 plt.title('Genetic Algorithm (GA)')
 plt.grid(True)
 plt.savefig('figures/Score_of_all_children.png')
+
+
+#heueheuegue
