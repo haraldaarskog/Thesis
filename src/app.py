@@ -62,3 +62,6 @@ plt.savefig('figures/Score_of_all_children.png')
 
 
 #heueheuegue
+
+
+#heui222
