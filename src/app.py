@@ -5,10 +5,6 @@ import ga
 import model_functions as mf
 import main_model as mm
 
-# Sphere Test Function
-def sphere(x):
-    return sum(x**2)
-
 
 M = 10
 weeks = 2
@@ -24,27 +20,41 @@ def optimize_ga(weights):
 problem = structure()
 #problem.costfunc = sphere
 problem.costfunc = optimize_ga
-problem.nvar = (number_of_queues, M)
-problem.varmin = np.zeros((number_of_queues, M))
-problem.varmax = np.full((number_of_queues, M), 1)
+problem.nvar = M
+problem.varmin = np.zeros(M)
+problem.varmax = np.full(M, 1)
 
 # GA Parameters
 params = structure()
-params.maxit = 20
-params.npop = 10
+params.maxit = 5
+params.npop = 5
 params.mu = 0.5
-params.sigma = 0.1
+params.sigma = 0.5
 
 # Run GA
 out = ga.run(problem, params)
 
 # Results
 
+#plt.xlim(0, params.maxit)
+#plt.xlabel('Iterations')
+#plt.ylabel('Best Cost')
+#plt.title('Genetic Algorithm (GA) - Figure 1')
+#plt.grid(True)
+#plt.savefig('figures/Score_chart.png')
+
+
+y = out.ch
+x = np.arange(0.5, params.maxit, step=params.maxit/len(out.ch))
 plt.plot(out.bestcost)
-# plt.semilogy(out.bestcost)
-plt.xlim(0, params.maxit)
+plt.plot(x, y, marker='o', linestyle='--', color='r', label='Square')
+"""
+plt.plot(out.ch)
+plt.xlim(0, 2*params.maxit)
+plt.xticks(np.arange(0, params.maxit, step=0.5))
+"""
 plt.xlabel('Iterations')
-plt.ylabel('Best Cost')
-plt.title('Genetic Algorithm (GA)')
+plt.ylabel('Values')
+plt.title('Genetic Algorithm (GA) - Figure 2')
 plt.grid(True)
-plt.show()
+plt.savefig('figures/Score_of_all_children.png')

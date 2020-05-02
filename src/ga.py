@@ -39,10 +39,11 @@ def run(problem, params):
             bestsol.values = pop[i].values
             print("Initialization: Best score = {}".format(bestsol.cost))
     # Best Cost of Iterations
-    bestcost = np.empty(maxit)
+    bestcost = []#np.empty(maxit)
+    bestcost.append(bestsol.cost)
 
     print("Initialization complete")
-
+    ch=[]
     # Main Loop
     for it in range(maxit):
 
@@ -92,6 +93,8 @@ def run(problem, params):
                 bestsol.values = c2.values
 
             # Add Offsprings to popc
+            ch.append(c1.cost)
+            ch.append(c2.cost)
             popc.append(c1)
             popc.append(c2)
 
@@ -102,16 +105,17 @@ def run(problem, params):
         pop = pop[0:npop]
 
         # Store Best Cost
-        bestcost[it] = bestsol.cost
+        bestcost.append(bestsol.cost)
 
         # Show Iteration Information
-        print("Iteration {}: Best score = {}".format(it, bestcost[it]))
+        print("Iteration {}: Best score = {}".format(it, bestcost[-1]))
 
     # Output
     out = structure()
     out.pop = pop
     out.bestsol = bestsol
     out.bestcost = bestcost
+    out.ch = ch
     #print(bestsol.values)
     return out
 
