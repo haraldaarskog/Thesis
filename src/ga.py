@@ -37,8 +37,8 @@ def run(problem, params):
         if pop[i].cost > bestsol.cost:
             bestsol = pop[i].deepcopy()
             bestsol.values = pop[i].values
-            print("Initialization: Best score = {}".format(bestsol.cost))
     # Best Cost of Iterations
+    print("Initialization: Best score = {}".format(bestsol.cost))
     bestcost = []#np.empty(maxit)
     bestcost.append(bestsol.cost)
 

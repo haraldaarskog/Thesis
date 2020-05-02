@@ -26,10 +26,10 @@ problem.varmax = np.full(M, 1)
 
 # GA Parameters
 params = structure()
-params.maxit = 2
-params.npop = 4
+params.maxit = 20
+params.npop = 5
 params.mu = 0.5
-params.sigma = 0.5
+params.sigma = 0.2
 
 # Run GA
 out = ga.run(problem, params)
