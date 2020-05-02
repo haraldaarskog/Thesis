@@ -5,7 +5,6 @@ import ga
 import model_functions as mf
 import main_model as mm
 
-
 M = 10
 weeks = 2
 diagnostic_processes = 2
@@ -26,42 +25,30 @@ problem.varmax = np.full(M, 1)
 
 # GA Parameters
 params = structure()
-params.maxit = 20
-params.npop = 5
+params.maxit = 10
+params.npop = 2
 params.mu = 0.5
 params.sigma = 0.2
+#the number of pairs of children to generate each iteration
+params.nc = int(np.round(params.npop/2)*2)//2
 
 # Run GA
 out = ga.run(problem, params)
 
 # Results
-
-#plt.xlim(0, params.maxit)
-#plt.xlabel('Iterations')
-#plt.ylabel('Best Cost')
-#plt.title('Genetic Algorithm (GA) - Figure 1')
-#plt.grid(True)
-#plt.savefig('figures/Score_chart.png')
-
-
 y = out.ch
 y_b = out.ch_b
 y = np.insert(y, 0, out.bestcost[0])
 y_b = np.insert(y_b, 0, out.bestcost[0])
-x = np.arange(0, params.maxit + params.maxit/len(out.ch), step=params.maxit/len(out.ch))
+#x = np.arange(0, params.maxit + params.maxit/len(out.ch), step=params.maxit/len(out.ch))
+x = np.arange(0, len(y))
 
 plt.plot(x, y, linestyle='-', color='b', label='Value of children')
 plt.plot(x, y_b, linestyle='--', color='r', label='Best value')
 plt.xlim(0, params.maxit)
-plt.xlabel('Iterations')
+plt.xlabel('Children generated')
 plt.ylabel('Values')
 plt.legend()
-plt.title('Genetic Algorithm (GA)')
+plt.title('Genetic Algorithm')
 plt.grid(True)
 plt.savefig('figures/Score_of_all_children.png')
-
-
-#heueheuegue
-
-
-#heui222

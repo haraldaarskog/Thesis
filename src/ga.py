@@ -14,7 +14,7 @@ def run(problem, params):
     maxit = params.maxit
     npop = params.npop
     beta = params.beta
-    nc = int(np.round(npop/2)*2)
+    nc = params.nc
     mu = params.mu
     sigma = params.sigma
 
@@ -38,11 +38,11 @@ def run(problem, params):
             bestsol = pop[i].deepcopy()
             bestsol.values = pop[i].values
     # Best Cost of Iterations
-    print("Initialization: Best score = {}".format(bestsol.cost))
+    print("Initialization complete")
+    print("Best score during initialization= {}".format(bestsol.cost))
     bestcost = []#np.empty(maxit)
     bestcost.append(bestsol.cost)
 
-    print("Initialization complete")
     ch=[]
     ch_b=[]
     # Main Loop
@@ -58,7 +58,7 @@ def run(problem, params):
         probs = costs#np.exp(-beta*costs)
 
         popc = []
-        for _ in range(nc//2):
+        for _ in range(nc):
 
             # Select Parents
             #q = np.random.permutation(npop)
