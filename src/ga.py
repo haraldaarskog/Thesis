@@ -44,6 +44,7 @@ def run(problem, params):
 
     print("Initialization complete")
     ch=[]
+    ch_b=[]
     # Main Loop
     for it in range(maxit):
 
@@ -86,6 +87,7 @@ def run(problem, params):
                 bestsol = c1.deepcopy()
                 bestsol.values = c1.values
 
+            ch_b.append(bestsol.cost)
             # Evaluate Second Offspring
             c2.cost = costfunc(c2.values)
             if c2.cost > bestsol.cost:
@@ -95,6 +97,7 @@ def run(problem, params):
             # Add Offsprings to popc
             ch.append(c1.cost)
             ch.append(c2.cost)
+            ch_b.append(bestsol.cost)
             popc.append(c1)
             popc.append(c2)
 
@@ -116,6 +119,7 @@ def run(problem, params):
     out.bestsol = bestsol
     out.bestcost = bestcost
     out.ch = ch
+    out.ch_b = ch_b
     #print(bestsol.values)
     return out
 
