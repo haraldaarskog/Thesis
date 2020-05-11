@@ -1,14 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
 
 #TODO: LES LEFTINK
 
 #Master class
 class Simulation:
-    def __init__(self, initial_queues, all_queues):
+    def __init__(self, all_queues):
         self.all_queues = all_queues
-        self.number_of_pathways = len(initial_queues)
         self.clock = 0
         self.t_arrival_dict = {}
         self.t_depart_dict = {}
@@ -19,7 +19,6 @@ class Simulation:
         self.queue_development = {}
         for queue in self.all_queues:
             self.queue_development[queue.id] = [queue.num_in_queue]
-
         self.num_arrivals_in_system = 0
         self.num_exits_in_system = 0
 
@@ -37,28 +36,34 @@ class Simulation:
             total_num += queue.num_in_queue
         self.total_num_in_queue.append(total_num)
 
+    def get_queue(self, queue_id):
+        for q in self.all_queues:
+            if q.id == queue_id:
+                return q
+
 
     def advance_time(self):
-        q_next_arrival_event = min(self.t_arrival_dict, key=self.t_arrival_dict.get)
-        t_next_arrival_event = self.t_arrival_dict[q_next_arrival_event]
-        q_arrival = self.all_queues[q_next_arrival_event]
+        next_arrival_queue_id = min(self.t_arrival_dict, key=self.t_arrival_dict.get)
+        t_next_arrival_event = self.t_arrival_dict[next_arrival_queue_id]
+        q_arrival = self.get_queue(next_arrival_queue_id)
 
-        q_next_departure_event = min(self.t_depart_dict, key=self.t_depart_dict.get)
-        t_next_departure_event = self.t_depart_dict[q_next_departure_event]
-        q_departure = self.all_queues[q_next_departure_event]
+        next_departure_queue_id = min(self.t_depart_dict, key=self.t_depart_dict.get)
+        t_next_departure_event = self.t_depart_dict[next_departure_queue_id]
+        q_departure = self.get_queue(next_departure_queue_id)
+
         t_event = min(t_next_arrival_event, t_next_departure_event)
 
         self.clock = t_event
 
 
         if t_next_arrival_event <= t_next_departure_event:
-            t_arrival, t_depart = self.all_queues[q_next_arrival_event].handle_arrival_event(self.clock)
-            self.t_arrival_dict[q_next_arrival_event] = t_arrival
-            self.t_depart_dict[q_next_arrival_event] = t_depart
+            t_arrival, t_depart = self.get_queue(next_arrival_queue_id).handle_arrival_event(self.clock)
+            self.t_arrival_dict[next_arrival_queue_id] = t_arrival
+            self.t_depart_dict[next_arrival_queue_id] = t_depart
 
         else:
             t_depart = q_departure.handle_depart_event(self.clock)
-            self.t_depart_dict[q_next_departure_event] = t_depart
+            self.t_depart_dict[next_departure_queue_id] = t_depart
 
             if not q_departure.is_last_queue:
                 #print("A patient is serviced at queue", q_departure.id, "and is about to enter queue", q_departure.next_Queue.id)
@@ -139,7 +144,7 @@ class Queue:
 def create_graph(s):
     for key in s.queue_development:
         dev = s.queue_development[key]
-        plt.plot(s.times,dev,linestyle='-', label=key)
+        plt.plot(s.times,dev,linestyle='-', label="Queue "+str(key))
 
     plt.xlabel('Days')
     plt.ylabel('Number of patients in queue')
@@ -149,18 +154,25 @@ def create_graph(s):
     plt.savefig('sim_figures/simulation.png')
 
 if __name__ == '__main__':
+    start_time=time.time()
     np.random.seed(0)
     q2 = Queue(2, None, False)
     q1 = Queue(1, q2, False)
     q0 = Queue(0, q1, True)
-    arr = [q0,q1,q2]
 
-    s = Simulation([q1], arr)
+    q4 = Queue(4, None, False)
+    q3 = Queue(3, q4, True)
+
+
+    arr = [q3,q4]
+
+    s = Simulation(arr)
 
     print("\n")
     print("******* Run simulation *******")
     print("\n")
-    for i in range(1000000):
+    for i in range(1000):
         s.advance_time()
+    print("Simulation time:", time.time() - start_time)
 
     create_graph(s)

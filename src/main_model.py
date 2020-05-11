@@ -134,8 +134,9 @@ def optimize_model(diagnostic_processes, weeks, N_input, M_input, shift, with_ro
         if not in_iteration == True:
             print("Generating variables:", end_variables - start_variables)
         #******************** Objective function ********************
-        if not in_iteration:
+        if not in_iteration or weights is None:
             model.setObjective(gp.quicksum(mof.obj_weights_m(j, m) * q_variable[j, t, n, m]  for j in range(total_queues) for t in range(Time_periods) for n in range(N) for m in range(M)), GRB.MINIMIZE)
+
         else:
             model.setObjective(gp.quicksum(weights[m] * q_variable[j, t, n, m]  for j in range(total_queues) for t in range(Time_periods) for n in range(N) for m in range(M)), GRB.MINIMIZE)
 
@@ -296,8 +297,8 @@ def optimize_model(diagnostic_processes, weeks, N_input, M_input, shift, with_ro
 
 #Running the model
 def run_model():
-    weights = [13.44461476, 48.82461693, 80.29788673, 35.88345536, 63.90958627, 69.1476366,80.07327896, 46.27973288, 59.56845895, 81.26770961]
-    optimize_model(diagnostic_processes = 2, weeks = 2, N_input = 10, M_input = 10, shift = 13, with_rolling_horizon = False, in_iteration = True, weights = weights)
+    #weights = [13.44461476, 48.82461693, 80.29788673, 35.88345536, 63.90958627, 69.1476366,80.07327896, 46.27973288, 59.56845895, 81.26770961]
+    optimize_model(diagnostic_processes = 2, weeks = 2, N_input = 10, M_input = 10, shift = 13, with_rolling_horizon = False, in_iteration = False, weights = None)
 
 if __name__ == '__main__':
     run_model()
