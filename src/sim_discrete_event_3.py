@@ -383,7 +383,7 @@ def main():
     import main_model as mm
     import model_functions as mf
 
-    weeks = 2
+    weeks = 10
     day_horizon = weeks*7-1
 
     #scheduled_appointments = np.full((10,100),1)
