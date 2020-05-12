@@ -35,18 +35,18 @@ activity_dict={
 #Patient processes. Patient process on rows, activity on columns
 #1 if patient process conducts activity, 0 otherwise
 diagnostic_processes = np.array([
-        [0,1,2,3],#Livmor. Start: 0
-        [0,6,4,3,7], #Livmorhals. Start: 4
-        [0,2,6,5,6]]) #Livmorhals. Start: 9
+        [0,1,2,3],#Livmor. 0/3
+        [0,6,4,3,7], #Livmorhals. Start: 4/8
+        [0,2,6,5,6]]) #Livmorhals. Start: 9/13
 
 treatment_processes = np.array([
-        [6,1,12,9,12], #13 Livmor, høyrisiko
-        [6,1,12,9,12,8], #Livmor: tilleggsbehandling, cellegidt
-        [12,9,12], #Livmorhals
-        [12,9,12,5,10], #Livmorhals
-        [3,8,10,14,10,13,8,4], #Livmorhals
-        [6,8,12,9,12,6,8], #Eggstokk
-        [12,9,12,6,8]]) #Eggstokk
+        [6,1,12,9,12], #14/18: Livmor, høyrisiko
+        [6,1,12,9,12,8], #19/24: Livmor: tilleggsbehandling, cellegidt
+        [12,9,12], #25/27:Livmorhals
+        [12,9,12,5,10], #28/32: Livmorhals
+        [3,8,10,14,10,13,8,4], #33/40: Livmorhals
+        [6,8,12,9,12,6,8], #41/47: Eggstokk
+        [12,9,12,6,8]]) #48/52: Eggstokk
 
 
 #patient processes on rows, treatment paths on columns. Det entries denotes the
@@ -79,17 +79,17 @@ activity_resource_map = np.array([
 
 #New demand in queue j in time period t
 Patient_arrivals_jt=np.matrix([
-        [4,0,0,0,0,0,0],#
+        [1,0,0,0,0,0,0],#
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
-        [3,0,0,0,0,0,0],#
+        [1,0,0,0,0,0,0],#
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
+        [1,0,0,0,0,0,0],#
         [0,0,0,0,0,0,0],
-        [4,0,0,0,0,0,0],#
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],

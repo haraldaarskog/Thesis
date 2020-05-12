@@ -372,7 +372,7 @@ def find_ga(queue):
                 else:
                     count += 1
     else:
-        queue = queue % get_total_number_of_diagnosis_queues()
+        queue = queue - get_total_number_of_diagnosis_queues()
         for r_t in range(rows_tp):
             cols_tp = len(tp[r_t])
             for c_t in range(cols_tp):
@@ -381,10 +381,11 @@ def find_ga(queue):
                 else:
                     count += 1
 
+#A dict that maps the queues to the right paths
 def create_queue_to_path(total_queues):
     path_dict = {}
     for j in range(total_queues):
-        g, a = find_ga(j)
+        g, _ = find_ga(j)
         path_dict[j] = g
     return path_dict
 
@@ -433,6 +434,6 @@ def create_K_parameter(start_value, increase_per_week, time_periods):
     return k_dict
 
 if __name__ == '__main__':
-    for i in range(30):
-        print(i,is_last_queue_in_treatment(i))
-    pass
+    for i in range(53):
+        j=15
+        print(i,j,create_Q_ij()[i,j])
