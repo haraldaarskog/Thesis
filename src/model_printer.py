@@ -40,15 +40,23 @@ def print_patient_process(g):
     path = mp.diagnostic_processes[g][:]
     str=""
     for i in range(len(path)):
-        if path[i]==1:
-            str += mp.diagnosis_activity_dict[i]+" -> "
+        str += mp.activity_dict[path[i]]+" -> "
     print(str[:-4])
 
 def all_print_patient_processes(G):
-    print("Patient processes:")
     for g in range(G):
-        print(str(g)+":",end=" ")
+        print("DP: " + str(g) + ":",end=" ")
         print_patient_process(g)
+
+def print_treatment_processes():
+    tp = mp.treatment_processes
+    rows = tp.shape[0]
+    for r in range(rows):
+        string = ""
+        for i in range(len(tp[r])):
+            string += mp.activity_dict[tp[r][i]] + " -> "
+        print("TP: "+str(r)+": "+ string[:-4])
+
 
 
 def create_set_table(number_of_current_queues, Time_periods, N, M, Patient_processes, Activities, Resources):

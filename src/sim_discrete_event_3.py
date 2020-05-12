@@ -265,7 +265,6 @@ class Queue:
             return
         next_arrival_day = self.day + np.round(np.random.exponential(1/rate) * 7)
         time = 0
-        print("Next arrival in queue",self.id,"is at day",next_arrival_day)
         self.set_arrival_day(next_arrival_day, time)
 
     #OTHER
@@ -279,7 +278,6 @@ class Queue:
     def initialize_arrival_dict(self):
         if self.is_incoming_queue:
             next_arrival_day = self.generate_next_arrival(0)
-            print(self.id, self.arrival_dict)
 
     def update_appointment_capacity(self):
         self.appointment_capacity = self.appointments[self.day]
@@ -358,8 +356,8 @@ def create_graph(s):
 
 
 def main():
-    start_time=time.time()
     np.random.seed(1)
+    start_time=time.time()
 
     q3 = Queue(3, None, False, None)
     q2 = Queue(2, q3, False, None)
@@ -383,13 +381,13 @@ def main():
     import main_model as mm
     import model_functions as mf
 
-    weeks = 10
+    weeks = 4
     day_horizon = weeks*7-1
 
     #scheduled_appointments = np.full((10,100),1)
     scheduled_appointments = np.random.randint(3, size = (20, 100000))
 
-    _, b_variable, _, _, _ = mm.optimize_model(diagnostic_processes = 2, weeks = weeks, N_input = 10, M_input = 10, shift = 13, with_rolling_horizon = False, in_iteration = True, weights = None)
+    _, b_variable, _, _, _ = mm.optimize_model(diagnostic_processes = 2, weeks = weeks, N_input = 20, M_input = 20, shift = 13, with_rolling_horizon = False, in_iteration = True, weights = None)
     scheduled_appointments = mf.from_dict_to_matrix(b_variable)
 
     s = Simulation(arr, scheduled_appointments)

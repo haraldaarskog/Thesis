@@ -43,7 +43,7 @@ def optimize_model(diagnostic_processes, weeks, N_input, M_input, shift, with_ro
     M = M_input
 
     #The number of activities is dervied from the number of columns in the patient process matrix
-    Activities = mp.diagnostic_processes.shape[1]
+    Activities = len(mp.activity_dict.keys())
     #The number of resources is dervied from the number of columns in the activity-resource matrix
     Resources = mp.activity_resource_map.shape[1]
 
@@ -56,7 +56,10 @@ def optimize_model(diagnostic_processes, weeks, N_input, M_input, shift, with_ro
 
     if not in_iteration == True:
         mop.create_set_table(number_of_current_queues, Time_periods, N, M, Patient_processes, Activities, Resources)
+        print("Diagnostic paths")
         mop.all_print_patient_processes(Patient_processes)
+        print("Treatment paths")
+        mop.print_treatment_processes()
 
     #********************Loading parameters********************
 
@@ -298,7 +301,7 @@ def optimize_model(diagnostic_processes, weeks, N_input, M_input, shift, with_ro
 #Running the model
 def run_model():
     #weights = [13.44461476, 48.82461693, 80.29788673, 35.88345536, 63.90958627, 69.1476366,80.07327896, 46.27973288, 59.56845895, 81.26770961]
-    optimize_model(diagnostic_processes = 2, weeks = 2, N_input = 10, M_input = 10, shift = 13, with_rolling_horizon = False, in_iteration = False, weights = None)
+    optimize_model(diagnostic_processes = 3, weeks = 3, N_input = 20, M_input = 20, shift = 13, with_rolling_horizon = False, in_iteration = False, weights = None)
 
 if __name__ == '__main__':
     run_model()

@@ -13,20 +13,21 @@ def number_of_queues(number_of_diagnostic_processes):
         raise ValueError("There are not defined that much patient processes.")
     sum = 0
     for i in range(number_of_diagnostic_processes):
-        sum += diagnostic_processes[i][:].sum()
+        sum += len(diagnostic_processes[i])
     return int(sum)
 
-def find_queue(patient_pro,activity):
-    if diagnostic_processes[patient_pro, activity] == 0:
-        return -1
-    rows,cols=diagnostic_processes.shape
-    sum = -1
+def find_queue(patient_pro, activity):
+    rows = diagnostic_processes.shape[0]
+    sum = 0
     for p in range(rows):
-        for a in range(cols):
-            if diagnostic_processes[p,a] == 1:
-                sum += 1
-            if patient_pro == p and activity == a:
-                return sum
+        if p != patient_pro:
+            sum += len(diagnostic_processes[p])
+        else:
+            for a in range(len(diagnostic_processes[p])):
+                if diagnostic_processes[p][a] == activity:
+                    return sum
+                else:
+                    sum += 1
     return None
 
 
@@ -157,10 +158,10 @@ def check_activity(a1,a2,g):
     return 0
 
 def is_last_queue_in_diagnosis(j):
-    sum1=-1
+    sum1 = -1
     for row in mp.diagnostic_processes:
-        sum1+=sum(row)
-        if j==sum1:
+        sum1 += len(row)
+        if j == sum1:
             return True
     return False
 
@@ -210,18 +211,24 @@ def get_min_capacity(j, T, R):
     return min_val
 
 def is_first_queue_in_treatment(j):
-    sum1=np.sum(mp.diagnostic_processes)
+    sum1 = get_total_number_of_diagnosis_queues()
     for row in mp.treatment_processes:
-        if j==sum1:
+        if j == sum1:
             return True
-        sum1+=sum(row)
+        sum1 += len(row)
     return False
 
 def get_total_number_of_diagnosis_queues():
-    return np.sum(mp.diagnostic_processes)
+    sum = 0
+    for row in diagnostic_processes:
+        sum += len(row)
+    return sum
 
 def get_total_number_of_treatment_queues():
-    return np.sum(mp.treatment_processes)
+    sum = 0
+    for row in mp.treatment_processes:
+        sum += len(row)
+    return sum
 
 def is_in_sequence_diagnosis(i, j):
     if i >= j:
@@ -237,7 +244,7 @@ def is_in_sequence_diagnosis(i, j):
 def is_last_queue_in_treatment(j):
     sum1 = -1 + get_total_number_of_diagnosis_queues()
     for row in mp.treatment_processes:
-        sum1 += sum(row)
+        sum1 += len(row)
         if j == sum1:
             return True
     return False
@@ -295,7 +302,7 @@ def generate_last_queues_in_diagnosis():
 
 
 def get_number_of_treatment_paths():
-    paths, activitites = mp.treatment_processes.shape
+    paths = mp.treatment_processes.shape[0]
     return int(paths)
 
 
@@ -352,25 +359,27 @@ def find_ga(queue):
         sys.exit()
     pp = mp.diagnostic_processes
     tp = mp.treatment_processes
-    rows_pp,cols_pp = pp.shape
-    rows_tp,cols_tp = tp.shape
+    rows_pp = pp.shape[0]
+    rows_tp = tp.shape[0]
 
-    count = -1
+    count = 0
     if not queue_is_treatment(queue):
         for r in range(rows_pp):
+            cols_pp = len(pp[r])
             for c in range(cols_pp):
-                if pp[r, c] == 1:
-                    count += 1
                 if count == queue:
-                    return r,c
+                    return r, pp[r][c]
+                else:
+                    count += 1
     else:
         queue = queue % get_total_number_of_diagnosis_queues()
         for r_t in range(rows_tp):
+            cols_tp = len(tp[r_t])
             for c_t in range(cols_tp):
-                if tp[r_t, c_t] == 1:
-                    count += 1
                 if count == queue:
-                    return r_t, c_t
+                    return r_t, tp[r_t][c_t]
+                else:
+                    count += 1
 
 def create_queue_to_path(total_queues):
     path_dict = {}
@@ -424,4 +433,6 @@ def create_K_parameter(start_value, increase_per_week, time_periods):
     return k_dict
 
 if __name__ == '__main__':
-    create_K_parameter(10,0.5,20)
+    for i in range(30):
+        print(i,is_last_queue_in_treatment(i))
+    pass
