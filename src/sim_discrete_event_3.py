@@ -467,7 +467,7 @@ def create_graph(s):
     plt.legend(loc='best')
     plt.title('Simulation')
     plt.grid(True)
-    plt.savefig('simulation/sim_figures/simulation_2.png')
+    plt.savefig('simulation/sim_figures/simulation_3.png')
 
 
 
@@ -494,7 +494,7 @@ def main():
     q12 = Queue(12, q13, False, None)
     q11 = Queue(11, q12, False, None)
     q10 = Queue(10, q11, False, None)
-    q9 = Queue(9, q10, True, 0.8)
+    q9 = Queue(9, q10, True, 0.5)
 
     arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13]
 
@@ -503,13 +503,13 @@ def main():
 
 
 
-    weeks = 5
+    weeks = 2
     day_horizon = weeks*mp.week_length
 
     #scheduled_appointments = np.full((10,100),1)
     #scheduled_appointments = np.random.randint(15, size = (20, 100000))
 
-    _, b_variable, _, _, _ = mm.optimize_model(weeks = weeks, N_input = 10, M_input = 10, shift = weeks * mp.week_length - 1, with_rolling_horizon = False, in_iteration = True, weights = None)
+    _, b_variable, _, _, _ = mm.optimize_model(weeks = weeks, N_input = 15, M_input = 15, shift = weeks * mp.week_length - 1, with_rolling_horizon = False, in_iteration = True, weights = None)
     scheduled_appointments = mf.from_dict_to_matrix(b_variable)
 
     s = Simulation(arr, scheduled_appointments)

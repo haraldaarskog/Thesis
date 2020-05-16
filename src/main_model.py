@@ -273,7 +273,7 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
         #Outputing the time it took to print results and write to file
         end_print = time.time()
         print("Printing:", end_print - start_print)
-        mg.create_gantt_chart(total_queues, Time_periods, mf.loadSolution(sol_file_name)["b"])
+        #mg.create_gantt_chart(total_queues, Time_periods, mf.loadSolution(sol_file_name)["b"])
 
     b_variable = mf.convert_dict(b_variable)
     q_variable = mf.convert_dict(q_variable)
