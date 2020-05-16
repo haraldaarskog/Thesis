@@ -37,11 +37,11 @@ activity_dict={
 diagnostic_processes = np.array([
         [0,1,2,3],#Livmor. 0/3
         [0,6,4,3,7], #Livmorhals. Start: 4/8
-        [0,2,6,5,6]]) #Livmorhals. Start: 9/13
+        [0,2,6,5,6]]) #Eggstokk. Start: 9/13
 
 treatment_processes = np.array([
         [6,1,12,9,12], #14/18: Livmor, høyrisiko
-        [6,1,12,9,12,8], #19/24: Livmor: tilleggsbehandling, cellegidt
+        [6,1,12,9,12,8], #19/24: Livmor: tilleggsbehandling, cellegift
         [12,9,12], #25/27:Livmorhals
         [12,9,12,5,10], #28/32: Livmorhals
         [3,8,10,14,10,13,8,4], #33/40: Livmorhals
@@ -63,6 +63,8 @@ diagnosis_recovery_times = np.full(100,1) #np.array([1,1,1,1,1,1,1,1,1,1,1,1,1,1
 #recovery time after treatment activity 0-2
 treatment_recovery_times = np.full(100,1)#np.array([1,1,1,1,1,1,1,1,1,1,1,1,1])
 
+week_length = 7
+
 #activities on rows, resources on columns. The entry represents the amount of resource j that is needed in activity i.
 activity_resource_map = np.array([
         [1,0,0,0,0,0,0,0,0,0],
@@ -79,16 +81,16 @@ activity_resource_map = np.array([
 
 #New demand in queue j in time period t
 Patient_arrivals_jt=np.matrix([
-        [1,0,0,0,0,0,0],#
+        [0.8,0.8,0.8,0.8,0.8,0,0],#
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
-        [1,0,0,0,0,0,0],#
+        [0.6,0.6,0.6,0.6,0.6,0,0],#
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
-        [1,0,0,0,0,0,0],#
+        [0.8,0.8,0.8,0.8,0.8,0,0],#
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
@@ -102,19 +104,19 @@ Patient_arrivals_jt=np.matrix([
 Time_limits_j = np.full(100,100) #np.array([100,6,100,22,100,6,100,100,100,22,100,6,22,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100])
 #Resource capacity for resource r at day t in a week
 L_rt=np.array([
-        [8,8,8,8,8,8,8],
-        [8,8,8,8,8,8,8],
-        [8,8,8,8,8,8,8],
-        [8,8,8,8,8,8,8],
-        [8,8,8,8,8,8,8],
-        [8,8,8,8,8,8,8],
-        [8,8,8,8,8,8,8],
-        [8,8,8,8,8,8,8],
-        [8,8,8,8,8,8,8],
-        [8,8,8,8,8,8,8]])
+        [8,8,8,8,8,0,0],
+        [8,8,8,8,8,0,0],
+        [8,8,8,8,8,0,0],
+        [8,8,8,8,8,0,0],
+        [8,8,8,8,8,0,0],
+        [8,8,8,8,8,0,0],
+        [8,8,8,8,8,0,0],
+        [8,8,8,8,8,0,0],
+        [8,8,8,8,8,0,0],
+        [8,8,8,8,8,0,0]])
 
 #Queue j's usage of resource r
-H_jr = np.zeros((60,10))
+H_jr = np.full((100,100),1)
 """
 np.array([
         [0,0,0,0,0,0,0,0,0,0],#

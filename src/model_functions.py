@@ -110,8 +110,8 @@ def create_normal_distribution(mean,std_deviation,n_samples):
     return np.round(s)
 
 
-#Writing the r
-def write_to_file(J,T,N,M,G,A,R,obj_value,n_variables,n_constraints,runtime):
+#mf.write_to_file(total_queues, Time_periods, N, M, objective_value, number_of_variables, number_of_constraints, runtime)
+def write_to_file(J,T,N,M,obj_value,n_variables,n_constraints,runtime, total_elapsed_time):
     now = datetime.now()
     dt_string = now.strftime("%d/%m %H:%M:%S")
     date,time=dt_string.split(" ")
@@ -124,15 +124,12 @@ def write_to_file(J,T,N,M,G,A,R,obj_value,n_variables,n_constraints,runtime):
         T_row=row[1]
         N_row=row[2]
         M_row=row[3]
-        G_row=row[4]
-        A_row=row[5]
-        R_row=row[6]
-        if J==J_row and T==T_row and N==N_row and M==M_row and G==G_row and A==A_row and R==R_row:
-            df.loc[index]=J,T,N,M,G,A,R,obj_value,n_variables,n_constraints,runtime,day,month,time
+        if J==J_row and T==T_row and N==N_row and M==M_row:
+            df.loc[index]=J,T,N,M,obj_value,n_variables,n_constraints,runtime,total_elapsed_time,day,month,time
             flag=False
             break
     if flag==True:
-        df.loc[len(df)]=[J,T,N,M,G,A,R,obj_value,n_variables,n_constraints,runtime,day,month,time]
+        df.loc[len(df)]=[J,T,N,M,obj_value,n_variables,n_constraints,runtime,day,month,time,total_elapsed_time]
     df = df.sort_values(by=['Day',  'Month', 'Time'],ascending=[False, False, False])
     df.to_excel('logging/run_data.xlsx',index=True)
 
@@ -205,7 +202,7 @@ def get_min_capacity(j, T, R):
     min_val=100
     for r in range(R):
         for t in range(T):
-            val=np.divide(mp.L_rt[r,t % 7], mp.H_jr[j,r])
+            val=np.divide(mp.L_rt[r,t % mp.week_length], mp.H_jr[j,r])
             if val<min_val:
                 min_val=val
     return min_val
@@ -328,13 +325,16 @@ def calculate_rollover_service(J, T, N, M, shift, c_variable, Q_ij, M_j):
 def create_E_jnm(J, N, M, shift, sol_file_name):
     E_jnm = old_solution(sol_file_name, "q", 0)[:, shift, :, :]
     old_c = old_solution(sol_file_name, "c", 0)[:, shift, :, :]
-    new_array=np.zeros((J,N,M))
+    new_array=np.zeros((J, N, M))
     for j in range(J):
         for n in range(N):
             for m in range(M):
                 value_q = E_jnm[j, n, m]
                 value_c = old_c[j, n, m]
                 if value_q > 0.0001:
+                    if n + 1 > N or m + 1 > M:
+                        print("The N or M values are too small")
+                        sys.exit()
                     new_array[j, n + 1, m + 1] = value_q - value_c
     return new_array
 
@@ -428,7 +428,7 @@ def create_K_parameter(start_value, increase_per_week, time_periods):
     value = start_value
     increase_per_week = increase_per_week
     for t in range(time_periods):
-        if t % 7 == 0 and t > 0:
+        if t % mp.week_length == 0 and t > 0:
             value = value * (1 + increase_per_week)
         k_dict[t] = value
     return k_dict
