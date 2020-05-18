@@ -32,6 +32,7 @@ class Simulation:
         self.distirbute_appointments()
         self.total_patients_generated = 0
         self.total_patients_exited = 0
+        self.patient_exit_list = []
 
 
     def distirbute_appointments(self):
@@ -181,9 +182,10 @@ class Simulation:
 
 
 class Queue:
-    def __init__(self, id, next_Queue, is_incoming_queue, arrival_rate):
+    def __init__(self, id, next_Queue, is_incoming_queue, arrival_rate, is_treatment_queue):
         self.id = id
         self.day = 0
+        self.is_treatment_queue = is_treatment_queue
 
         self.patient_list = []
         self.num_in_queue_development = []
@@ -204,7 +206,12 @@ class Queue:
         #Patients that is transfered between queues
         self.incoming_patients = []
 
-        self.allowed_time = 1000
+        self.allowed_time = 24
+
+        self.queue_graph = []
+
+        self.potential_treatment_queues = []
+        self.probability_of_treatment_queues = []
 
     def __str__(self):
      return "Queue ("+str(self.id)+"): " + str(self.get_number_of_patients_in_queue())
@@ -299,6 +306,7 @@ class Queue:
         self.patient_list.append(patient)
         patient.is_added_to_a_queue(time, self.day, self.id)
         self.num_arrivals += 1
+        self.queue_graph.append([self.day + time/24, self.get_number_of_patients_in_queue()])
 
     def get_patient_with_highest_m(self):
         if len(self.patient_list) == 0:
@@ -347,7 +355,6 @@ class Queue:
         self.add_patient(patient, time)
         print("EVENT: Arr: q("+str(self.id)+"), in queue: " + str(self.get_number_of_patients_in_queue())+", t =", time)
         if self.get_number_of_patients_in_queue() <= 1 and self.get_appointment_capacity() > 0:
-            print("Hejhallå")
             self.set_next_departure_time(time)
 
 
@@ -359,6 +366,7 @@ class Queue:
 
         departure_patient = self.get_patient_with_highest_m()
         self.remove_patient(departure_patient)
+        self.queue_graph.append([self.day + time/24, self.get_number_of_patients_in_queue()])
         self.decrease_appointment_capacity()
         self.num_departs += 1
 
@@ -378,11 +386,30 @@ class Queue:
 
         if not self.is_last_queue:
             self.transfer_patient_to_next_queue(departure_patient, service_time_for_departure_patient)
+        elif self.is_last_queue and not is_treatment_queue:
+            self.transfer_patient_to_treatment_path(departure_patient, service_time_for_departure_patient)
 
+        return departure_patient
+
+
+    def choose_treatment_path(self):
+        index = np.random.choice(np.arange(0, len(self.potential_treatment_queues)), p=self.probability_of_treatment_queues)
+        return self.potential_treatment_queues[index]
+
+    def transfer_patient_to_treatment_path(self, patient, service_time):
+        treatment_queue = choose_treatment_path()
+        patient.next_queue_arrival_day = self.day + self.num_recovery_days
+        if self.num_recovery_days > 0:
+            patient.next_queue_arrival_time = 0
+        else:
+            patient.next_queue_arrival_time = service_time
+
+        self.treatment_queue.incoming_patients.append(patient)
 
 
     #Only patients that are moving forward to another queue
     def transfer_patient_to_next_queue(self, patient, service_time):
+
         patient.next_queue_arrival_day = self.day + self.num_recovery_days
         if self.num_recovery_days > 0:
             patient.next_queue_arrival_time = 0
@@ -457,59 +484,140 @@ class Patient:
 
 
 
-def create_graph(s):
+def create_graph_1(s):
     for key in s.queue_development:
         dev = s.queue_development[key]
-        plt.plot(s.day_array,dev,linestyle='-', label="Queue " + str(key))
+        plt.plot(s.day_array, dev,linestyle='-', label="Queue " + str(key))
 
     plt.xlabel('Days')
     plt.ylabel('Number of patients in queue')
     plt.legend(loc='best')
     plt.title('Simulation')
     plt.grid(True)
-    plt.savefig('simulation/sim_figures/simulation_3.png')
+    plt.savefig('simulation/sim_figures/simulation_1.png')
+    plt.close()
+
+def create_graph_2(s):
+    for queue in s.all_queues:
+        dev = queue.queue_graph
+        dev = np.asarray(dev)
+        x_ax = dev[:,0]
+        y_ax = dev[:,1]
+        plt.plot(x_ax, y_ax,linestyle='-', label="Queue " + str(queue.id))
+
+    plt.xlabel('Days')
+    plt.ylabel('Number of patients in queue')
+    plt.legend(loc='best')
+    plt.title('Simulation')
+    plt.grid(True)
+    plt.savefig('simulation/sim_figures/simulation_2.png')
 
 
 
 
 def main():
-    np.random.seed(1)
+    #np.random.seed(0)
     start_time=time.time()
 
     #Livmor
-    q3 = Queue(3, None, False, None)
-    q2 = Queue(2, q3, False, None)
-    q1 = Queue(1, q2, False, None)
-    q0 = Queue(0, q1, True, 0.8)
+    q3 = Queue(3, None, False, None, False)
+    q2 = Queue(2, q3, False, None, False)
+    q1 = Queue(1, q2, False, None, False)
+    q0 = Queue(0, q1, True, 4/7, False)
 
     #Livmorhals
-    q8 = Queue(8, None, False, None)
-    q7 = Queue(7, q8, False, None)
-    q6 = Queue(6, q7, False, None)
-    q5 = Queue(5, q6, False, None)
-    q4 = Queue(4, q5, True, 0.6)
+    q8 = Queue(8, None, False, None, False)
+    q7 = Queue(7, q8, False, None, False)
+    q6 = Queue(6, q7, False, None, False)
+    q5 = Queue(5, q6, False, None, False)
+    q4 = Queue(4, q5, True, 3/7, False)
 
     #Eggstokk
-    q13 = Queue(13, None, False, None)
-    q12 = Queue(12, q13, False, None)
-    q11 = Queue(11, q12, False, None)
-    q10 = Queue(10, q11, False, None)
-    q9 = Queue(9, q10, True, 0.5)
-
-    arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13]
+    q13 = Queue(13, None, False, None, False)
+    q12 = Queue(12, q13, False, None, False)
+    q11 = Queue(11, q12, False, None, False)
+    q10 = Queue(10, q11, False, None, False)
+    q9 = Queue(9, q10, True, 4/7, False)
 
 
+    #Treatment path: Livmor 1
+    q18 = Queue(18, None, False, None, True)
+    q17 = Queue(17, q18, False, None, True)
+    q16 = Queue(16, q17, False, None, True)
+    q15 = Queue(15, q16, False, None, True)
+    q14 = Queue(14, q15, True, None, True)
+
+    #Treatment path: Livmor 2
+    q24 = Queue(23, None, False, None, True)
+    q23 = Queue(23, q24, False, None, True)
+    q22 = Queue(22, q23, False, None, True)
+    q21 = Queue(21, q22, False, None, True)
+    q20 = Queue(20, q21, False, None, True)
+    q19 = Queue(19, q20, True, None, True)
+
+    #Treatment path: Livmorhals 1
+    q27 = Queue(27, None, False, None, True)
+    q26 = Queue(26, q27, False, None, True)
+    q25 = Queue(25, q26, True, None, True)
+
+    #Treatment path: Livmorhals 2
+    q32 = Queue(32, None, False, None, True)
+    q31 = Queue(31, q32, False, None, True)
+    q30 = Queue(30, q31, False, None, True)
+    q29 = Queue(29, q30, False, None, True)
+    q28 = Queue(28, q29, True, None, True)
+
+    #Treatment path: Livmorhals 3
+    q40 = Queue(40, None, False, None, True)
+    q39 = Queue(39, q40, False, None, True)
+    q38 = Queue(38, q39, False, None, True)
+    q37 = Queue(37, q38, False, None, True)
+    q36 = Queue(36, q37, False, None, True)
+    q35 = Queue(35, q36, False, None, True)
+    q34 = Queue(34, q35, False, None, True)
+    q33 = Queue(33, q34, True, None, True)
+
+    #Treatment path: Eggstokk 1
+    q47 = Queue(47, None, False, None, True)
+    q46 = Queue(46, q47, False, None, True)
+    q45 = Queue(45, q46, False, None, True)
+    q44 = Queue(44, q45, False, None, True)
+    q43 = Queue(43, q44, False, None, True)
+    q42 = Queue(42, q43, False, None, True)
+    q41 = Queue(41, q42, True, None, True)
+
+    #Treatment path: Eggstokk 2
+    q52 = Queue(52, None, False, None, True)
+    q51 = Queue(51, q52, False, None, True)
+    q50 = Queue(50, q51, False, None, True)
+    q49 = Queue(49, q50, False, None, True)
+    q48 = Queue(48, q49, True, None, True)
+
+
+    arr = [q0,q1,q2,q3,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24]#,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13]
+
+    q3.potential_treatment_queues = [q14,q19]
+    q3.probability_of_treatment_queues = [1/2,1/2]
+
+    q8.potential_treatment_queues = [q25,q28,q33]
+    q8.probability_of_treatment_queues = [1/3,1/3,1/3]
+
+    q13.potential_treatment_queues = [q41,q48]
+    q13.probability_of_treatment_queues = [1/2,1/2]
+
+
+    percentage_increase_in_capacity = 0.1
+    mp.Patient_arrivals_jt = mp.Patient_arrivals_jt * (1 + percentage_increase_in_capacity)
 
 
 
-
-    weeks = 2
-    day_horizon = weeks*mp.week_length
+    weeks = 1
+    day_horizon = weeks * mp.week_length
 
     #scheduled_appointments = np.full((10,100),1)
     #scheduled_appointments = np.random.randint(15, size = (20, 100000))
 
-    _, b_variable, _, _, _ = mm.optimize_model(weeks = weeks, N_input = 15, M_input = 15, shift = weeks * mp.week_length - 1, with_rolling_horizon = False, in_iteration = True, weights = None)
+    _, b_variable, _, _, _ = mm.optimize_model(weeks = weeks, N_input = 11, M_input = 11, shift = weeks * mp.week_length - 1, with_rolling_horizon = False, in_iteration = True, weights = None)
     scheduled_appointments = mf.from_dict_to_matrix(b_variable)
 
     s = Simulation(arr, scheduled_appointments)
@@ -521,12 +629,15 @@ def main():
     for i in range(day_horizon):
         s.next_day()
     print("\nSimulation time:", time.time() - start_time)
-    create_graph(s)
+    create_graph_1(s)
+    create_graph_2(s)
 
     print("Generated:",s.total_patients_generated)
     print("Exited:",s.total_patients_exited)
     if s.total_patients_generated > 0:
         print("Exited/generated:",s.total_patients_exited/s.total_patients_generated)
+
+
 
 if __name__ == '__main__':
     main()

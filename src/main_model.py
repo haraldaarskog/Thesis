@@ -43,7 +43,7 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
     #The number of activities is dervied from the number of columns in the patient process matrix
     Activities = len(mp.activity_dict.keys())
     #The number of resources is dervied from the number of columns in the activity-resource matrix
-    Resources = mp.activity_resource_map.shape[1]
+    Resources = mp.L_rt.shape[0]
 
     #The shift can not be larger than the number of time periods.
     if shift >= Time_periods:
@@ -193,7 +193,7 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
 
 
         #Time limit constraints
-        for j in range(total_queues):
+        for j in range(total_diagnosis_queues):
             for t in range(Time_periods):
                 for n in range(N):
                     for m in range(M):
@@ -202,8 +202,9 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
 
 
         #Shifting constraints
+        print(A_jt.shape)
         for j in range(total_queues):
-            for t in range(Time_periods):
+            for t in range(Time_periods - (shift)):
                 model.addConstr(u_A_variable[j, t] - u_R_variable[j, t] == b_variable[j, t] - A_jt[j, t])
 
 
@@ -288,8 +289,8 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
 
 #Running the model
 def run_model():
-    w = 5
-    optimize_model(weeks = w, N_input = 15, M_input = 15, shift = w*mp.week_length-1, with_rolling_horizon = False, in_iteration = False, weights = None)
+    w = 1
+    optimize_model(weeks = w, N_input = 25, M_input = 25, shift = 1, with_rolling_horizon = False, in_iteration = False, weights = None)
 
 if __name__ == '__main__':
     run_model()

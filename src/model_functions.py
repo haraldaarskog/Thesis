@@ -135,10 +135,6 @@ def write_to_file(J,T,N,M,obj_value,n_variables,n_constraints,runtime, total_ela
 
 
 
-
-
-
-
 def check_activity(a1,a2,g):
     count1=0
     count2=0
@@ -285,11 +281,6 @@ def queue_is_treatment(j):
 
 
 
-
-
-
-
-
 def generate_last_queues_in_diagnosis():
     queue_set=set()
     for j in range(get_total_number_of_diagnosis_queues()):
@@ -332,7 +323,7 @@ def create_E_jnm(J, N, M, shift, sol_file_name):
                 value_q = E_jnm[j, n, m]
                 value_c = old_c[j, n, m]
                 if value_q > 0.0001:
-                    if n + 1 > N or m + 1 > M:
+                    if n >= N - 1 or m >= M - 1:
                         print("The N or M values are too small")
                         sys.exit()
                     new_array[j, n + 1, m + 1] = value_q - value_c
