@@ -19,7 +19,7 @@ sol_file_name = "output/model_solution.sol"
 #A function that runs the model
 #If with_rolling_horizon = True, input from the previous run is included
 #shift: number of days between running the model the last time and today
-def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iteration, weights):
+def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iteration, weights, E, G):
 
 
 
@@ -75,13 +75,20 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
     #otherwise, the input from previous runs are all zero.
     if with_rolling_horizon == True:
         A_jt = mf.old_solution("output/model_solution.sol", "b", shift)
-        E_jnm = mf.create_E_jnm(total_queues, N, M, shift, sol_file_name)
+        #E_jnm = mf.create_E_jnm(total_queues, N, M, shift, sol_file_name)
         c_jtnm_old = mf.old_solution("output/model_solution.sol", "c", 0)
-        G_jtnm = mf.calculate_rollover_service(total_queues, Time_periods, N, M, shift, c_jtnm_old, Q_ij, M_j)
+        #G_jtnm = mf.calculate_rollover_service(total_queues, Time_periods, N, M, shift, c_jtnm_old, Q_ij, M_j)
+        if E is None or G is None:
+            E_jnm = np.zeros((total_queues, N, M))
+            G_jtm = np.zeros((total_queues, Time_periods, M))
+        else:
+            E_jnm = mf.from_dict_to_matrix_2(E, (total_queues,N,M))
+            G_jtm = mf.from_dict_to_matrix_2(G, (total_queues,Time_periods,M))
+
     else:
         E_jnm = np.zeros((total_queues, N, M))
         A_jt = np.zeros((total_queues, Time_periods))
-        G_jtnm = np.zeros((total_queues, Time_periods, N, M))
+        G_jtm = np.zeros((total_queues, Time_periods, M))
 
 
     #printing the initialization time
@@ -140,13 +147,13 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
                 for t in range(Time_periods):
                     for m in range(M):
                         if m == 0:
-                            model.addConstr(q_variable[j, t, 0, 0] == Patient_arrivals_jt[j, t % week_length] + gp.quicksum(G_jtnm[j, t, n, 0] for n in range(N)) + gp.quicksum(c_variable[i, t - M_j[i], 0, 0] * Q_ij[i, j] for i in range(total_diagnosis_queues) if (t - M_j[i]) >= 0))
+                            model.addConstr(q_variable[j, t, 0, 0] == Patient_arrivals_jt[j, t % week_length] + G_jtm[j, t, 0] + gp.quicksum(c_variable[i, t - M_j[i], 0, 0] * Q_ij[i, j] for i in range(total_diagnosis_queues) if (t - M_j[i]) >= 0))
                         elif t == 0 and m > 0:
                             for n in range(N):
                                 if n <= m:
                                     model.addConstr(q_variable[j, t, n, m] == E_jnm[j, n, m])
                         else:
-                            model.addConstr(q_variable[j, t, 0, m] == G_jtnm[j, t, 0, m] + gp.quicksum(c_variable[i, t - M_j[i], n, m] * Q_ij[i, j] for i in range(total_diagnosis_queues) for n in range(N) if (t - M_j[i]) >= 0))
+                            model.addConstr(q_variable[j, t, 0, m] == G_jtm[j, t, m] + gp.quicksum(c_variable[i, t - M_j[i], n, m] * Q_ij[i, j] for i in range(total_diagnosis_queues) for n in range(N) if (t - M_j[i]) >= 0))
 
 
             else:
@@ -157,9 +164,9 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
                                 model.addConstr(q_variable[j, t, n, m] == E_jnm[j, n, m])
                         elif mf.is_first_queue_in_treatment(j):
                             g_j = queue_to_path[j]
-                            model.addConstr(q_variable[j, t, 0, m] == gp.quicksum(probability_of_path[queue_to_path[i], g_j] * c_variable[i, t - M_j[i], n, m] for i in set_of_last_queues_in_diagnosis for n in range(N) if (t - M_j[i]) >= 0))
+                            model.addConstr(q_variable[j, t, 0, m] == G_jtm[j, t, m] + gp.quicksum(probability_of_path[queue_to_path[i], g_j] * c_variable[i, t - M_j[i], n, m] for i in set_of_last_queues_in_diagnosis for n in range(N) if (t - M_j[i]) >= 0))
                         else:
-                            model.addConstr(q_variable[j, t, 0, m] == G_jtnm[j, t, 0, m] + gp.quicksum(c_variable[i, t - M_j[i], n, m] * Q_ij[i, j] for i in range(total_diagnosis_queues, total_queues) for n in range(N) if (t - M_j[i]) >= 0))
+                            model.addConstr(q_variable[j, t, 0, m] == G_jtm[j, t, m] + gp.quicksum(c_variable[i, t - M_j[i], n, m] * Q_ij[i, j] for i in range(total_diagnosis_queues, total_queues) for n in range(N) if (t - M_j[i]) >= 0))
 
 
         #print("Cons1 total:", time.time()-start_constraints)
@@ -204,7 +211,7 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
         #Shifting constraints
         print(A_jt.shape)
         for j in range(total_queues):
-            for t in range(Time_periods - (shift)):
+            for t in range(Time_periods - shift - 1):
                 model.addConstr(u_A_variable[j, t] - u_R_variable[j, t] == b_variable[j, t] - A_jt[j, t])
 
 
@@ -233,8 +240,8 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
         print('Error code ' + str(e.errno) + ': ' + str(e))
 
 
-    sum_exit_diagnosis, sum_exit_treatment = mf.number_of_exit_patients(c_variable, shift)
-    discharged = mf.calculate_discharged_patients(c_variable)
+    #sum_exit_diagnosis, sum_exit_treatment = mf.number_of_exit_patients(c_variable, shift)
+    #discharged = mf.calculate_discharged_patients(c_variable)
     if not in_iteration == True:
         start_print = time.time()
         mop.print_variables(q_variable, c_variable, b_variable, u_A_variable, u_R_variable)
@@ -247,30 +254,28 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
         number_of_variables = len(model.getVars())
 
 
-
-
-        sum_D, sum_E, sum_G= mf.calculate_stats(total_diagnosis_queues, Patient_arrivals_jt, E_jnm, G_jtnm, shift)
+        sum_D, sum_E, sum_G= mf.calculate_stats(total_diagnosis_queues, Patient_arrivals_jt, E_jnm, G_jtm, shift)
 
         new_patient_arrivals = sum_D * weeks
 
         #Denne tar lang tid
-        rollover_queue_next_period = np.sum(mf.create_E_jnm(total_queues, N, M, shift, sol_file_name))
+        #rollover_queue_next_period = np.sum(mf.create_E_jnm(total_queues, N, M, shift, sol_file_name))
 
-        rollover_queue_next_period = np.around(rollover_queue_next_period, decimals=2)
+        #rollover_queue_next_period = np.around(rollover_queue_next_period, decimals=2)
 
         #denne tar lang tid
-        c_jtnm_current = mf.old_solution(sol_file_name, "c", 0)
+        #c_jtnm_current = mf.old_solution(sol_file_name, "c", 0)
 
         #tar noe tid
-        arr = mf.calculate_rollover_service(total_queues, Time_periods, N, M, shift, c_jtnm_current, Q_ij, M_j)
+        #arr = mf.calculate_rollover_service(total_queues, Time_periods, N, M, shift, c_jtnm_current, Q_ij, M_j)
 
         #tar noe tid
-        rollover_service_next_period = np.sum(mf.calculate_rollover_service(total_queues, Time_periods, N, M, shift, c_jtnm_current, Q_ij, M_j))
-        rollover_service_next_period = np.around(rollover_service_next_period, decimals=2)
+        #rollover_service_next_period = np.sum(mf.calculate_rollover_service(total_queues, Time_periods, N, M, shift, c_jtnm_current, Q_ij, M_j))
+        #rollover_service_next_period = np.around(rollover_service_next_period, decimals=2)
 
 
 
-        mop.create_overview_table(new_patient_arrivals, sum_E, sum_G, sum_exit_diagnosis, sum_exit_treatment, rollover_queue_next_period, rollover_service_next_period, discharged)
+        mop.create_overview_table(new_patient_arrivals, sum_E, sum_G)#, sum_exit_diagnosis, sum_exit_treatment, rollover_queue_next_period, rollover_service_next_period, discharged)
         #Outputing the time it took to print results and write to file
         end_print = time.time()
         print("Printing:", end_print - start_print)
@@ -278,18 +283,18 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
 
     b_variable = mf.convert_dict(b_variable)
     q_variable = mf.convert_dict(q_variable)
-    mop.print_resource_utilization(total_queues, Time_periods,b_variable)
+    #mop.print_resource_utilization(total_queues, Time_periods,b_variable)
     #print(discharged + sum_exit_treatment)
     total_elapsed_time = time.time() - overall_start
     #tar noe tid
     if not in_iteration == True:
         mf.write_to_file(total_queues, Time_periods, N, M, objective_value, number_of_variables, number_of_constraints, runtime, total_elapsed_time)
-    return q_variable, b_variable, objective_value, discharged, sum_exit_treatment
+    return q_variable, b_variable, objective_value
 
 
 #Running the model
 def run_model():
-    w = 1
+    w = 3
     optimize_model(weeks = w, N_input = 25, M_input = 25, shift = 1, with_rolling_horizon = False, in_iteration = False, weights = None)
 
 if __name__ == '__main__':

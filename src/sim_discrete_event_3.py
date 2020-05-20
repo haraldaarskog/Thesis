@@ -12,7 +12,7 @@ import sys
 
 #Master class
 class Simulation:
-    def __init__(self, all_queues, appointments):
+    def __init__(self, all_queues, appointments, no_show_prob):
         self.all_queues = all_queues
         self.day = -1
         self.time = 0
@@ -29,18 +29,57 @@ class Simulation:
         self.day_array=[0]
 
         self.appointments = appointments
-        self.distirbute_appointments()
+        self.no_show_prob=no_show_prob
+        self.distribute_appointments()
         self.total_patients_generated = 0
         self.total_patients_exited = 0
         self.patient_exit_list = []
 
 
-    def distirbute_appointments(self):
+    def create_G_matrix(self):
+        g_dict = {}
+        for queue in self.all_queues:
+            for patient in queue.incoming_patients:
+                j = queue.id
+                t = patient.next_queue_arrival_day % 7
+                m = patient.number_of_days_in_system
+                if (j, t, m) not in g_dict.keys():
+                    g_dict[j,t,m] = 1
+                else:
+                    g_dict[j,t,m] = g[j,t,m] + 1
+        return g_dict
+
+    def create_E_matrix(self):
+        e_dict = {}
+        N = M = 100
+        for queue in self.all_queues:
+            patient_array = queue.patient_list + queue.no_show_list
+            queue_id = queue.id
+            for patient in patient_array:
+                for n in range(0, N):
+                    for m in range(0, M):
+                        if patient.number_of_days_in_queue == n and patient.number_of_days_in_system == m:
+                            if (queue_id,n,m) not in e_dict.keys():
+                                e_dict[queue_id,n,m] = 1
+                            else:
+                                e_dict[queue_id,n,m] = e_dict[queue_id,n,m] + 1
+        return e_dict
+
+
+    def distribute_appointments(self):
         for j in range(self.appointments.shape[0]):
-            j_appointments = self.appointments[j]
-            queue = self.get_queue(j)
-            if queue != None:
-                queue.set_appointments(j_appointments)
+            for q in self.all_queues:
+                q.prob_of_no_show = self.no_show_prob
+                if j == q.id and q is not None:
+                    j_appointments = self.appointments[j]
+                    q.appointments = j_appointments
+
+    def update_appointments(self, scheduled_appointments):
+        for j in range(scheduled_appointments.shape[0]):
+            for q in self.all_queues:
+                if j == q.id and q is not None:
+                    j_appointments = self.appointments[j]
+                    q.set_appointments(j_appointments)
 
 
     def update_queue_development(self):
@@ -50,11 +89,11 @@ class Simulation:
         sum_arrivals = 0
         for queue in self.all_queues:
             arr = self.queue_development[queue.id]
-            arr.append(queue.get_number_of_patients_in_queue())
+            arr.append(queue.get_number_of_patients_in_patientlist_noshowlist())
             self.queue_development[queue.id] = arr
             sum_arrivals += queue.num_arrivals
             sum_departs += queue.num_departs
-            total_num += queue.get_number_of_patients_in_queue()
+            total_num += queue.get_number_of_patients_in_patientlist_noshowlist()
         self.total_num_in_queue.append(total_num)
         self.num_arrivals_in_system.append(sum_arrivals)
         self.num_departures_in_system.append(sum_departs)
@@ -63,8 +102,12 @@ class Simulation:
         for queue in self.all_queues:
             queue.day = self.day
             queue.update_appointment_capacity()
+            for p in queue.no_show_list:
+                queue.no_show_list.remove(p)
+                queue.patient_list.append(p)
             for patient in queue.patient_list:
                 patient.new_day()
+                patient.no_show = False
 
 
     def load_patients_in_service_into_next_queue(self):
@@ -107,7 +150,8 @@ class Simulation:
         sum = 0
         for queue in self.all_queues:
             if queue.is_incoming_queue:
-                sum += queue.generate_arrivals_from_poisson()
+                new_arrivals = queue.generate_arrivals_from_poisson()
+                sum += new_arrivals
         self.total_patients_generated += sum
 
     def remaining_events_this_day(self):
@@ -121,7 +165,7 @@ class Simulation:
         return_queue = None
         min_t = float('inf')
         for queue in self.all_queues:
-            if queue.get_next_departure_time() < min_t:
+            if queue.get_next_departure_time() < min_t and queue.get_appointment_capacity() > 0 and queue.get_number_of_patients_in_queue() > 0:
                 min_t = queue.get_next_departure_time()
                 return_queue = queue
 
@@ -175,9 +219,10 @@ class Simulation:
             next_arrival_queue.remove_patient_from_incoming_list(arrival_patient)
 
         else:
-            next_departure_queue.handle_depart_event(self.time)
-            if next_departure_queue.is_last_queue:
+            no_show = next_departure_queue.handle_depart_event(self.time)
+            if next_departure_queue.is_last_queue and not no_show and next_departure_queue.is_treatment_queue:
                 self.total_patients_exited += 1
+                print("MINUS______________")
 
 
 
@@ -188,6 +233,8 @@ class Queue:
         self.is_treatment_queue = is_treatment_queue
 
         self.patient_list = []
+        self.no_show_list = []
+        self.prob_of_no_show = 0
         self.num_in_queue_development = []
         self.is_incoming_queue = is_incoming_queue
         self.is_last_queue = True if next_Queue == None else False
@@ -197,9 +244,10 @@ class Queue:
         self.num_arrivals = 0
         self.num_departs = 0
         self.next_Queue = next_Queue
-        self.num_recovery_days = 0
-        self.appointments = None
+        self.num_recovery_days = 1
+        self.appointments = []
         self.appointment_capacity = 0
+        self.appointment_dict = {}
 
         self.expected_number_of_arrivals_per_day = arrival_rate
 
@@ -221,7 +269,12 @@ class Queue:
         self.next_departure_time = time
 
     def set_appointments(self, appointment_array):
-        self.appointments = appointment_array
+        #print("1:",self.appointments)
+        #print("2:",appointment_array)
+        self.appointments = joined_list = [*self.appointments, *appointment_array]
+        #print("3:",self.appointments)
+
+
 
     def set_recovery_days(self, rec_days):
         self.num_recovery_days = rec_days
@@ -231,6 +284,9 @@ class Queue:
 
     def get_number_of_patients_in_queue(self):
         return len(self.patient_list)
+
+    def get_number_of_patients_in_patientlist_noshowlist(self):
+        return len(self.patient_list) + len(self.no_show_list)
 
 
         #finds the next arrival time of today
@@ -280,12 +336,14 @@ class Queue:
         for i in range(new_arrivals):
             self.handle_arrival_event(Patient(self.day), 0)
         return new_arrivals
+
     #OTHER
 
     def load_incoming_patients(self):
         for patient in self.incoming_patients:
             if patient.next_queue_arrival_day == self.day:
                 self.handle_arrival_event(patient, 0)
+                self.remove_patient_from_incoming_list(patient)
 
     def update_appointment_capacity(self):
         self.appointment_capacity = self.appointments[self.day]
@@ -328,7 +386,6 @@ class Queue:
         for p in self.patient_list:
             if p.id == patient_id:
                 self.patient_list.remove(p)
-                p.is_removed_from_queue()
                 break
 
 
@@ -358,6 +415,14 @@ class Queue:
             self.set_next_departure_time(time)
 
 
+    def no_show_is_happening(self):
+        prob = self.prob_of_no_show
+        no_show = np.random.choice([0, 1], p=[1-prob, prob])
+        if no_show == 1:
+            return True
+        else:
+            return False
+
     #A departure means that a patients leaves the queue and is going into service
     def handle_depart_event(self, time):
         if len(self.patient_list) == 0:
@@ -365,9 +430,15 @@ class Queue:
             sys.exit()
 
         departure_patient = self.get_patient_with_highest_m()
-        self.remove_patient(departure_patient)
-        self.queue_graph.append([self.day + time/24, self.get_number_of_patients_in_queue()])
         self.decrease_appointment_capacity()
+        if self.no_show_is_happening():
+            print("We have a no show!")
+            self.remove_patient(departure_patient)
+            self.no_show_list.append(departure_patient)
+            return True
+        self.remove_patient(departure_patient)
+        departure_patient.is_removed_from_queue()
+        self.queue_graph.append([self.day + time/24, self.get_number_of_patients_in_queue()])
         self.num_departs += 1
 
         print("EVENT: Dep: q("+str(self.id)+"), remaining: "+ str(self.get_number_of_patients_in_queue()) + ", t =", time)
@@ -386,25 +457,30 @@ class Queue:
 
         if not self.is_last_queue:
             self.transfer_patient_to_next_queue(departure_patient, service_time_for_departure_patient)
-        elif self.is_last_queue and not is_treatment_queue:
+        elif self.is_last_queue and not self.is_treatment_queue:
             self.transfer_patient_to_treatment_path(departure_patient, service_time_for_departure_patient)
 
-        return departure_patient
+        return False
 
 
     def choose_treatment_path(self):
-        index = np.random.choice(np.arange(0, len(self.potential_treatment_queues)), p=self.probability_of_treatment_queues)
+        index = np.random.choice(np.arange(0, len(self.potential_treatment_queues)+1), p=self.probability_of_treatment_queues)
+        #Out of the system
+        if index == len(self.potential_treatment_queues):
+            print("OUT!!!!!!!!")
+            return False
         return self.potential_treatment_queues[index]
 
     def transfer_patient_to_treatment_path(self, patient, service_time):
-        treatment_queue = choose_treatment_path()
-        patient.next_queue_arrival_day = self.day + self.num_recovery_days
-        if self.num_recovery_days > 0:
-            patient.next_queue_arrival_time = 0
-        else:
-            patient.next_queue_arrival_time = service_time
+        next_treatment_queue = self.choose_treatment_path()
+        if next_treatment_queue != False:
+            patient.next_queue_arrival_day = self.day + self.num_recovery_days
+            if self.num_recovery_days > 0:
+                patient.next_queue_arrival_time = 0
+            else:
+                patient.next_queue_arrival_time = service_time
 
-        self.treatment_queue.incoming_patients.append(patient)
+            next_treatment_queue.incoming_patients.append(patient)
 
 
     #Only patients that are moving forward to another queue
@@ -417,6 +493,9 @@ class Queue:
             patient.next_queue_arrival_time = service_time
 
         self.next_Queue.incoming_patients.append(patient)
+
+
+
 
 
 
@@ -512,11 +591,39 @@ def create_graph_2(s):
     plt.grid(True)
     plt.savefig('simulation/sim_figures/simulation_2.png')
 
+def create_graph_3(s, diagnosis):
+    uterin_cancer=[0,1,2,3,14,15,16,17,18,19,20,21,22,23,24]
+    cerivcal_cancer = [4,5,6,7,8,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]
+    ovarian_cancer=[9,10,11,12,13,41,42,43,44,45,46,47,48,49,50,51,52]
+
+    for queue in s.all_queues:
+        if queue.id in uterin_cancer and diagnosis == "uterin":
+            dev = s.queue_development[queue.id]
+            plt.plot(s.day_array, dev,linestyle='-', label="Queue " + str(queue.id))
+
+
+        if queue.id in cerivcal_cancer and diagnosis == "cervical":
+            dev = s.queue_development[queue.id]
+            plt.plot(s.day_array, dev,linestyle='-', label="Queue " + str(queue.id))
+
+
+        if queue.id in ovarian_cancer and diagnosis == "ovarian":
+            dev = s.queue_development[queue.id]
+            plt.plot(s.day_array, dev,linestyle='-', label="Queue " + str(queue.id))
+
+    plt.xlabel('Days')
+    plt.ylabel('Number of patients in queue')
+    plt.legend(loc='best')
+    plt.title('Simulation')
+    plt.grid(True)
+    plt.savefig("simulation/sim_figures/simulation_"+diagnosis+".png")
+    plt.close()
+
 
 
 
 def main():
-    #np.random.seed(0)
+    np.random.seed(0)
     start_time=time.time()
 
     #Livmor
@@ -545,27 +652,27 @@ def main():
     q17 = Queue(17, q18, False, None, True)
     q16 = Queue(16, q17, False, None, True)
     q15 = Queue(15, q16, False, None, True)
-    q14 = Queue(14, q15, True, None, True)
+    q14 = Queue(14, q15, False, None, True)
 
     #Treatment path: Livmor 2
-    q24 = Queue(23, None, False, None, True)
+    q24 = Queue(24, None, False, None, True)
     q23 = Queue(23, q24, False, None, True)
     q22 = Queue(22, q23, False, None, True)
     q21 = Queue(21, q22, False, None, True)
     q20 = Queue(20, q21, False, None, True)
-    q19 = Queue(19, q20, True, None, True)
+    q19 = Queue(19, q20, False, None, True)
 
     #Treatment path: Livmorhals 1
     q27 = Queue(27, None, False, None, True)
     q26 = Queue(26, q27, False, None, True)
-    q25 = Queue(25, q26, True, None, True)
+    q25 = Queue(25, q26, False, None, True)
 
     #Treatment path: Livmorhals 2
     q32 = Queue(32, None, False, None, True)
     q31 = Queue(31, q32, False, None, True)
     q30 = Queue(30, q31, False, None, True)
     q29 = Queue(29, q30, False, None, True)
-    q28 = Queue(28, q29, True, None, True)
+    q28 = Queue(28, q29, False, None, True)
 
     #Treatment path: Livmorhals 3
     q40 = Queue(40, None, False, None, True)
@@ -575,7 +682,7 @@ def main():
     q36 = Queue(36, q37, False, None, True)
     q35 = Queue(35, q36, False, None, True)
     q34 = Queue(34, q35, False, None, True)
-    q33 = Queue(33, q34, True, None, True)
+    q33 = Queue(33, q34, False, None, True)
 
     #Treatment path: Eggstokk 1
     q47 = Queue(47, None, False, None, True)
@@ -584,53 +691,80 @@ def main():
     q44 = Queue(44, q45, False, None, True)
     q43 = Queue(43, q44, False, None, True)
     q42 = Queue(42, q43, False, None, True)
-    q41 = Queue(41, q42, True, None, True)
+    q41 = Queue(41, q42, False, None, True)
 
     #Treatment path: Eggstokk 2
     q52 = Queue(52, None, False, None, True)
     q51 = Queue(51, q52, False, None, True)
     q50 = Queue(50, q51, False, None, True)
     q49 = Queue(49, q50, False, None, True)
-    q48 = Queue(48, q49, True, None, True)
+    q48 = Queue(48, q49, False, None, True)
 
 
-    arr = [q0,q1,q2,q3,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24]#,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13]
+
+
+    #arr = [q0,q1,q2,q3,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24]#,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13]
+    arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24,q25,q26,q27,q28,q29,q30,q31,q32,q33,q34,q35,q36,q37,q38,q39,q40,q41,q42,q43,q44,q45,q46,q47,q48,q49,q50,q51,q52]
 
     q3.potential_treatment_queues = [q14,q19]
-    q3.probability_of_treatment_queues = [1/2,1/2]
+    q3.probability_of_treatment_queues = [0.5,0.5,0]
 
     q8.potential_treatment_queues = [q25,q28,q33]
-    q8.probability_of_treatment_queues = [1/3,1/3,1/3]
+    q8.probability_of_treatment_queues = [7/24,1/24,2/3,0]
 
     q13.potential_treatment_queues = [q41,q48]
-    q13.probability_of_treatment_queues = [1/2,1/2]
+    q13.probability_of_treatment_queues = [0.3,0.7,0]
 
 
-    percentage_increase_in_capacity = 0.1
+    percentage_increase_in_capacity = 0
+
+
+    #scheduled_appointments = np.full((100,100), 1)
+    #scheduled_appointments = np.random.randint(2, size = (70, 10000))
+
+    weeks = 2
+    G = None
+    E = None
+    N = M = 11
+    shift = 6
+
+    simulation_horizon = 20
     mp.Patient_arrivals_jt = mp.Patient_arrivals_jt * (1 + percentage_increase_in_capacity)
+    no_show_percentage = 0
 
 
-
-    weeks = 1
-    day_horizon = weeks * mp.week_length
-
-    #scheduled_appointments = np.full((10,100),1)
-    #scheduled_appointments = np.random.randint(15, size = (20, 100000))
-
-    _, b_variable, _, _, _ = mm.optimize_model(weeks = weeks, N_input = 11, M_input = 11, shift = weeks * mp.week_length - 1, with_rolling_horizon = False, in_iteration = True, weights = None)
-    scheduled_appointments = mf.from_dict_to_matrix(b_variable)
-
-    s = Simulation(arr, scheduled_appointments)
-
+    _, b_variable, _ = mm.optimize_model(weeks = weeks, N_input = N, M_input = M, shift = shift, with_rolling_horizon = False, in_iteration = False, weights = None, G = G,E = E)
+    #print(b_variable)
+    scheduled_appointments = mf.from_dict_to_matrix_2(b_variable, (53,weeks*7))
+    #print(scheduled_appointments)
+    s = Simulation(arr, scheduled_appointments, no_show_percentage)
 
     print("\n")
     print("******* Run simulation *******")
     print("\n")
-    for i in range(day_horizon):
+    for i in range(simulation_horizon):
         s.next_day()
+        if i % 7 == 6 and i > 0:
+
+            E = s.create_E_matrix()
+            G = s.create_G_matrix()
+            print("E:",E)
+            print("G:",G)
+
+            _, b_variable, _ = mm.optimize_model(weeks = weeks, N_input = N, M_input = M, shift = shift, with_rolling_horizon = True, in_iteration = False, weights = None, G = G, E = E)
+
+            scheduled_appointments = mf.from_dict_to_matrix_2(b_variable,(53, weeks*7))
+
+            #Generating the schedules are for the next week
+            s.update_appointments(scheduled_appointments)
+
+
     print("\nSimulation time:", time.time() - start_time)
     create_graph_1(s)
-    create_graph_2(s)
+    create_graph_3(s,"uterin")
+    create_graph_3(s,"cervical")
+    create_graph_3(s,"ovarian")
+    #create_graph_2(s)
 
     print("Generated:",s.total_patients_generated)
     print("Exited:",s.total_patients_exited)

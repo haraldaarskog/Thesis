@@ -57,18 +57,21 @@ def shift_solution(d, shift):
     for key in d:
         j = key[0]
         old_t = key[1]
-        if old_t >= shift:
+        if old_t > shift:
             new_t = old_t - shift - 1
             d_new[(j, new_t)] = d[key]
+
     return d_new
 
 
 def find_max_of_dict(d):
+    if len(d)==0:
+        print("The shift value results in no values for A_jt")
     arr1=[]
     arr2=[]
     flag=True
+    arr=[]
     for key in d:
-
         if flag:
             key_len=len(key)
             arr=np.zeros(key_len)
@@ -77,10 +80,16 @@ def find_max_of_dict(d):
             value=int(key[i])
             if value>arr[i]:
                 arr[i]=value
-    return arr.astype(int)+1
+    return arr.astype(int) + 1
 
 def from_dict_to_matrix(d):
     dim=tuple(find_max_of_dict(d))
+    array=np.zeros(dim)
+    for key in d:
+        array[key]=d[key]
+    return array
+
+def from_dict_to_matrix_2(d,dim):
     array=np.zeros(dim)
     for key in d:
         array[key]=d[key]

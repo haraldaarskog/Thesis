@@ -76,21 +76,21 @@ def print_model_status(status, runtime):
         print(colored("Check gurobi status codes", 'red', attrs = ['bold']))
         sys.exit()
 
-def create_overview_table(new_patient_arrivals, sum_E, sum_G, sum_exit_diagnosis, sum_exit_treatment, rollover_queue_next_period, rollover_service_next_period, discharged):
+def create_overview_table(new_patient_arrivals, sum_E, sum_G):#, sum_exit_diagnosis, sum_exit_treatment, rollover_queue_next_period, rollover_service_next_period, discharged):
     t = BeautifulTable()
     t.column_headers = [colored("Description", attrs = ['bold']), colored("Amount", attrs = ['bold'])]
     t.append_row(["Number of new patients entering the system", colored(new_patient_arrivals, 'green')])
     t.append_row(["Number of rollover-queue patients entering the system", colored(sum_E, 'green')])
     t.append_row(["Number of rollover-service patients entering the system", colored(sum_G, 'green')])
 
-    t.append_row(["Patients exiting from diagnosis", sum_exit_diagnosis])
-    t.append_row(["Number of patients discharged after diagnosis", discharged])
-    t.append_row(["Patients exiting from treatment", sum_exit_treatment])
-    t.append_row(["Total patient exiting patient pathway", colored(discharged + sum_exit_treatment, 'red')])
+    #t.append_row(["Patients exiting from diagnosis", sum_exit_diagnosis])
+    #t.append_row(["Number of patients discharged after diagnosis", discharged])
+    #t.append_row(["Patients exiting from treatment", sum_exit_treatment])
+    #t.append_row(["Total patient exiting patient pathway", colored(discharged + sum_exit_treatment, 'red')])
 
-    t.append_row(["Rollover-queue patients into next period", colored(rollover_queue_next_period, 'red')])
-    t.append_row(["Rollover-service into next period", colored(rollover_service_next_period, 'red')])
-    t.append_row(["Exiting patients / Incoming patients", str(100 * np.around((discharged + sum_exit_treatment) / (new_patient_arrivals + sum_E + sum_G), decimals = 2))+"%"])
+    #t.append_row(["Rollover-queue patients into next period", colored(rollover_queue_next_period, 'red')])
+    #t.append_row(["Rollover-service into next period", colored(rollover_service_next_period, 'red')])
+    #t.append_row(["Exiting patients / Incoming patients", str(100 * np.around((discharged + sum_exit_treatment) / (new_patient_arrivals + sum_E + sum_G), decimals = 2))+"%"])
 
     t.set_style(BeautifulTable.STYLE_BOX)
     print(t)
