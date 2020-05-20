@@ -5,6 +5,7 @@ import main_model as mm
 import model_functions as mf
 import model_parameters as mp
 import sys
+import names
 
 
 
@@ -81,7 +82,6 @@ class Simulation:
                 if j == q.id and q is not None:
                     j_appointments = scheduled_appointments[j]
                     q.set_appointments(j_appointments)
-                    print(q.id, q.appointments)
 
 
     def update_queue_development(self):
@@ -226,6 +226,30 @@ class Simulation:
                 self.total_patients_exited += 1
                 print("MINUS______________")
 
+    def summarize_discharged_from_diagnosis(self):
+        sum = 0
+        for queue in self.all_queues:
+            sum += queue.discharged_from_diagnosis
+        return sum
+
+
+    def get_info_about_every_patient_in_system(self):
+        for queue in self.all_queues:
+            print("QUEUE:", queue.id)
+            if len(queue.patient_list)>0:
+                print("Waiting list:")
+                for p in queue.patient_list:
+                    print(p.name, "N:",p.get_number_of_days_in_current_queue(),"M:", p.get_number_of_days_in_system())
+            if len(queue.no_show_list)>0:
+                print("No-show list:")
+                for p in queue.no_show_list:
+                    print(p.name, "N:", p.get_number_of_days_in_current_queue(),"M:", p.get_number_of_days_in_system())
+            if len(queue.incoming_patients)>0:
+                print("Incoming patient list:")
+                for p in queue.incoming_patients:
+                    print(p.name, "N:", p.get_number_of_days_in_current_queue(),"M:", p.get_number_of_days_in_system())
+
+
 
 
 class Queue:
@@ -262,6 +286,8 @@ class Queue:
 
         self.potential_treatment_queues = []
         self.probability_of_treatment_queues = []
+
+        self.discharged_from_diagnosis = 0
 
     def __str__(self):
      return "Queue ("+str(self.id)+"): " + str(self.get_number_of_patients_in_queue())
@@ -336,7 +362,7 @@ class Queue:
         new_arrivals = np.random.poisson(self.expected_number_of_arrivals_per_day, 1)[0]
         print(new_arrivals,"new arrivals in queue",self.id)
         for i in range(new_arrivals):
-            self.handle_arrival_event(Patient(self.day), 0)
+            self.handle_arrival_event(Patient(self.day, names.get_full_name()), 0)
         return new_arrivals
 
     #OTHER
@@ -483,6 +509,8 @@ class Queue:
                 patient.next_queue_arrival_time = service_time
 
             next_treatment_queue.incoming_patients.append(patient)
+        else:
+            self.discharged_from_diagnosis += 1
 
 
     #Only patients that are moving forward to another queue
@@ -507,9 +535,10 @@ class Queue:
 class Patient:
 
 
-    def __init__(self, day):
+    def __init__(self, day, name):
         self.day = day
         self.entering_day = day
+        self.name = name
 
         self.number_of_days_in_queue = 0
         self.number_of_days_in_system = 0
@@ -529,6 +558,9 @@ class Patient:
 
     def get_number_of_days_in_system(self):
         return self.number_of_days_in_system
+
+    def get_number_of_days_in_current_queue(self):
+        return self.number_of_days_in_queue
 
     def update_queue_history(self, queue_id):
         self.queue_history.append(queue_id)
@@ -734,7 +766,7 @@ def main():
     #arr = [q0,q1,q2,q3,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24]#,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13]
     arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13,q14]#,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24,q25,q26,q27,q28,q29,q30,q31,q32,q33,q34,q35,q36,q37,q38,q39,q40,q41,q42,q43,q44,q45,q46,q47,q48,q49,q50,q51,q52]
     q3.potential_treatment_queues = [q4,q9]
-    q3.probability_of_treatment_queues = [0.5,0.5,0]
+    q3.probability_of_treatment_queues = [0.25,0.25,0.5]
 
 
 
@@ -750,9 +782,9 @@ def main():
     N = M = 25
     shift = 6
 
-    simulation_horizon = 40
+    simulation_horizon = 100
     percentage_increase_in_capacity = 0
-    no_show_percentage = 0
+    no_show_percentage = 0.1
 
 
     mp.Patient_arrivals_jt = mp.Patient_arrivals_jt * (1 + percentage_increase_in_capacity)
@@ -789,8 +821,10 @@ def main():
 
     print("Generated:",s.total_patients_generated)
     print("Exited:",s.total_patients_exited)
+    print("Discharged from diagnosis:",s.summarize_discharged_from_diagnosis())
     if s.total_patients_generated > 0:
-        print("Exited/generated:",s.total_patients_exited/s.total_patients_generated)
+        print("Exited/generated:",(s.total_patients_exited + s.summarize_discharged_from_diagnosis())/s.total_patients_generated)
+    print(s.get_info_about_every_patient_in_system())
 
 
 
