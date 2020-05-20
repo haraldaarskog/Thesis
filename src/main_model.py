@@ -13,13 +13,13 @@ import model_obj_function as mof
 import model_printer as mop
 
 overall_start = time.time()
-start_initialization_time = time.time()
 sol_file_name = "output/model_solution.sol"
 
 #A function that runs the model
 #If with_rolling_horizon = True, input from the previous run is included
 #shift: number of days between running the model the last time and today
 def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iteration, weights, E, G):
+    start_initialization_time = time.time()
 
 
 
@@ -209,7 +209,7 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
 
 
         #Shifting constraints
-        print(A_jt.shape)
+        #rint(A_jt.shape)
         for j in range(total_queues):
             for t in range(Time_periods - shift - 1):
                 model.addConstr(u_A_variable[j, t] - u_R_variable[j, t] == b_variable[j, t] - A_jt[j, t])
@@ -294,8 +294,8 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
 
 #Running the model
 def run_model():
-    w = 3
-    optimize_model(weeks = w, N_input = 25, M_input = 25, shift = 1, with_rolling_horizon = False, in_iteration = False, weights = None)
+    w = 1
+    optimize_model(weeks = w, N_input = 10, M_input = 10, shift = 1, with_rolling_horizon = False, in_iteration = False, weights = None, E = None, G = None)
 
 if __name__ == '__main__':
     run_model()

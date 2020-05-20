@@ -29,7 +29,7 @@ class Simulation:
         self.day_array=[0]
 
         self.appointments = appointments
-        self.no_show_prob=no_show_prob
+        self.no_show_prob = no_show_prob
         self.distribute_appointments()
         self.total_patients_generated = 0
         self.total_patients_exited = 0
@@ -73,13 +73,15 @@ class Simulation:
                 if j == q.id and q is not None:
                     j_appointments = self.appointments[j]
                     q.appointments = j_appointments
+                    print(q.id, q.appointments)
 
     def update_appointments(self, scheduled_appointments):
         for j in range(scheduled_appointments.shape[0]):
             for q in self.all_queues:
                 if j == q.id and q is not None:
-                    j_appointments = self.appointments[j]
+                    j_appointments = scheduled_appointments[j]
                     q.set_appointments(j_appointments)
+                    print(q.id, q.appointments)
 
 
     def update_queue_development(self):
@@ -271,7 +273,7 @@ class Queue:
     def set_appointments(self, appointment_array):
         #print("1:",self.appointments)
         #print("2:",appointment_array)
-        self.appointments = joined_list = [*self.appointments, *appointment_array]
+        self.appointments = [*self.appointments, *appointment_array]
         #print("3:",self.appointments)
 
 
@@ -566,7 +568,7 @@ class Patient:
 def create_graph_1(s):
     for key in s.queue_development:
         dev = s.queue_development[key]
-        plt.plot(s.day_array, dev,linestyle='-', label="Queue " + str(key))
+        plt.plot(s.day_array, dev, linestyle='-', label="Queue " + str(key))
 
     plt.xlabel('Days')
     plt.ylabel('Number of patients in queue')
@@ -632,6 +634,22 @@ def main():
     q1 = Queue(1, q2, False, None, False)
     q0 = Queue(0, q1, True, 4/7, False)
 
+    #Livmor_treat 1
+    q8 = Queue(8, None, False, None, True)
+    q7 = Queue(7, q8, False, None, True)
+    q6 = Queue(6, q7, False, None, True)
+    q5 = Queue(5, q6, False, None, True)
+    q4 = Queue(4, q5, False, None, True)
+
+    #Livmor_treat 2
+    q14 = Queue(14, None, False, None, True)
+    q13 = Queue(13, q14, False, None, True)
+    q12 = Queue(12, q13, False, None, True)
+    q11 = Queue(11, q12, False, None, True)
+    q10 = Queue(10, q11, False, None, True)
+    q9 = Queue(9, q10, False, None, True)
+    """
+
     #Livmorhals
     q8 = Queue(8, None, False, None, False)
     q7 = Queue(7, q8, False, None, False)
@@ -661,6 +679,8 @@ def main():
     q21 = Queue(21, q22, False, None, True)
     q20 = Queue(20, q21, False, None, True)
     q19 = Queue(19, q20, False, None, True)
+
+
 
     #Treatment path: Livmorhals 1
     q27 = Queue(27, None, False, None, True)
@@ -700,12 +720,6 @@ def main():
     q49 = Queue(49, q50, False, None, True)
     q48 = Queue(48, q49, False, None, True)
 
-
-
-
-    #arr = [q0,q1,q2,q3,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24]#,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13]
-    arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24,q25,q26,q27,q28,q29,q30,q31,q32,q33,q34,q35,q36,q37,q38,q39,q40,q41,q42,q43,q44,q45,q46,q47,q48,q49,q50,q51,q52]
-
     q3.potential_treatment_queues = [q14,q19]
     q3.probability_of_treatment_queues = [0.5,0.5,0]
 
@@ -714,49 +728,56 @@ def main():
 
     q13.potential_treatment_queues = [q41,q48]
     q13.probability_of_treatment_queues = [0.3,0.7,0]
+    """
 
 
-    percentage_increase_in_capacity = 0
+    #arr = [q0,q1,q2,q3,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24]#,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13]
+    arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13,q14]#,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24,q25,q26,q27,q28,q29,q30,q31,q32,q33,q34,q35,q36,q37,q38,q39,q40,q41,q42,q43,q44,q45,q46,q47,q48,q49,q50,q51,q52]
+    q3.potential_treatment_queues = [q4,q9]
+    q3.probability_of_treatment_queues = [0.5,0.5,0]
+
+
+
 
 
     #scheduled_appointments = np.full((100,100), 1)
     #scheduled_appointments = np.random.randint(2, size = (70, 10000))
 
+
     weeks = 2
     G = None
     E = None
-    N = M = 11
+    N = M = 25
     shift = 6
 
-    simulation_horizon = 20
-    mp.Patient_arrivals_jt = mp.Patient_arrivals_jt * (1 + percentage_increase_in_capacity)
+    simulation_horizon = 40
+    percentage_increase_in_capacity = 0
     no_show_percentage = 0
 
 
+    mp.Patient_arrivals_jt = mp.Patient_arrivals_jt * (1 + percentage_increase_in_capacity)
     _, b_variable, _ = mm.optimize_model(weeks = weeks, N_input = N, M_input = M, shift = shift, with_rolling_horizon = False, in_iteration = False, weights = None, G = G,E = E)
     #print(b_variable)
-    scheduled_appointments = mf.from_dict_to_matrix_2(b_variable, (53,weeks*7))
+    scheduled_appointments = mf.from_dict_to_matrix_2(b_variable, (53, weeks*7))
     #print(scheduled_appointments)
-    s = Simulation(arr, scheduled_appointments, no_show_percentage)
+    s = Simulation(arr, scheduled_appointments[:,:7], no_show_percentage)
 
-    print("\n")
-    print("******* Run simulation *******")
-    print("\n")
+
     for i in range(simulation_horizon):
         s.next_day()
         if i % 7 == 6 and i > 0:
 
             E = s.create_E_matrix()
             G = s.create_G_matrix()
-            print("E:",E)
-            print("G:",G)
+            #print("E:",E)
+            #print("G:",G)
 
             _, b_variable, _ = mm.optimize_model(weeks = weeks, N_input = N, M_input = M, shift = shift, with_rolling_horizon = True, in_iteration = False, weights = None, G = G, E = E)
-
             scheduled_appointments = mf.from_dict_to_matrix_2(b_variable,(53, weeks*7))
-
+            #print(b_variable)
+            #print(scheduled_appointments[:,:7])
             #Generating the schedules are for the next week
-            s.update_appointments(scheduled_appointments)
+            s.update_appointments(scheduled_appointments[:,:7])
 
 
     print("\nSimulation time:", time.time() - start_time)
@@ -774,4 +795,10 @@ def main():
 
 
 if __name__ == '__main__':
+    print("\n")
+    print("******* Run simulation *******")
+    print("\n")
     main()
+    print("\n")
+    print("******* END  *******")
+    print("\n")
