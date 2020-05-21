@@ -80,25 +80,7 @@ Time_limits_j = np.array(
 [100,100,100,100,100,100,100,100,100,100,100,100,100,100])
 #[100,6,100,22,100,6,100,100,22,100,6,100,100,22])
 
-resource_dict={
-###Staff
-0: "Physician",
-1: "Gynecologist",
-2: "Radiologist",
-3: "Radiographer",
-4: "Pathologist",
-5: "Surgeon",
-6: "Nurse",
-##
-7: "CT scanner",
-8: "MRI scanner",
-9: "Operating room",
-10: "Laboratory (Biopsy)",
-11: "Outpatient clinic",
-12: "Bed",
-13: "Day unit",
-14: "Radiotherapy laboratory",
-15: "Meeting room"}
+
 
 #Resource capacity for resource r at day t in a week
 #L_rt = np.concatenate((np.full((100,5),100), np.full((100,2),0)), axis=1)
@@ -119,6 +101,28 @@ L_rt = np.array([
         [8,8,8,8,8,0,0],
         [8,8,8,8,8,0,0],
         [8,8,8,8,8,0,0]])
+
+
+
+resource_dict={
+###Staff
+0: "Physician",
+1: "Gynecologist",
+2: "Radiologist",
+3: "Radiographer",
+4: "Pathologist",
+5: "Surgeon",
+6: "Nurse",
+##
+7: "CT scanner",
+8: "MRI scanner",
+9: "Operating room",
+10: "Laboratory (Biopsy)",
+11: "Outpatient clinic",
+12: "Bed",
+13: "Day unit",
+14: "Radiotherapy laboratory",
+15: "Meeting room"}
 
 #Queue j's usage of resource r
 H_jr = np.full((100,100),1)

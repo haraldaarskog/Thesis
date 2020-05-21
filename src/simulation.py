@@ -289,6 +289,8 @@ class Queue:
 
         self.discharged_from_diagnosis = 0
 
+        self.patients_out_of_system = []
+
     def __str__(self):
      return "Queue ("+str(self.id)+"): " + str(self.get_number_of_patients_in_queue())
 
@@ -511,6 +513,7 @@ class Queue:
             next_treatment_queue.incoming_patients.append(patient)
         else:
             self.discharged_from_diagnosis += 1
+            self.patients_out_of_system.append(patient)
 
 
     #Only patients that are moving forward to another queue
@@ -666,6 +669,8 @@ def main():
     q1 = Queue(1, q2, False, None, False)
     q0 = Queue(0, q1, True, 4/7, False)
 
+
+
     #Livmor_treat 1
     q8 = Queue(8, None, False, None, True)
     q7 = Queue(7, q8, False, None, True)
@@ -761,15 +766,13 @@ def main():
     q13.potential_treatment_queues = [q41,q48]
     q13.probability_of_treatment_queues = [0.3,0.7,0]
     """
-
-
-    #arr = [q0,q1,q2,q3,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24]#,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13]
-    arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13,q14]#,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24,q25,q26,q27,q28,q29,q30,q31,q32,q33,q34,q35,q36,q37,q38,q39,q40,q41,q42,q43,q44,q45,q46,q47,q48,q49,q50,q51,q52]
     q3.potential_treatment_queues = [q4,q9]
     q3.probability_of_treatment_queues = [0.25,0.25,0.5]
 
 
 
+    #arr = [q0,q1,q2,q3,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24]#,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13]
+    arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13,q14]#,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24,q25,q26,q27,q28,q29,q30,q31,q32,q33,q34,q35,q36,q37,q38,q39,q40,q41,q42,q43,q44,q45,q46,q47,q48,q49,q50,q51,q52]
 
 
     #scheduled_appointments = np.full((100,100), 1)
@@ -779,12 +782,12 @@ def main():
     weeks = 2
     G = None
     E = None
-    N = M = 25
+    N = M = 28
     shift = 6
 
-    simulation_horizon = 100
+    simulation_horizon = 40
     percentage_increase_in_capacity = 0
-    no_show_percentage = 0.1
+    no_show_percentage = 0
 
 
     mp.Patient_arrivals_jt = mp.Patient_arrivals_jt * (1 + percentage_increase_in_capacity)
