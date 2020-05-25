@@ -10,6 +10,7 @@ import names
 
 
 #TODO: LES LEFTINK
+#TODO: Implementer en metode som beregner total ventetid i systemet. Og gj.sn ventetid/pas
 
 #Master class
 class Simulation:
@@ -580,8 +581,9 @@ class Patient:
 
     def new_day(self):
         self.day += 1
-        self.number_of_days_in_queue += 1
-        self.number_of_days_in_system += 1
+        if self.is_in_queue:
+            self.number_of_days_in_queue += 1
+            self.number_of_days_in_system += 1
 
     def get_queue_arrival_day(self):
         return self.arrival_day_in_current_queue
@@ -594,9 +596,6 @@ class Patient:
 
     def set_arrival_time_in_current_queue(self, time):
         self.arrival_time_in_current_queue = time
-
-
-
 
 
 
@@ -685,6 +684,7 @@ def main():
     q11 = Queue(11, q12, False, None, True)
     q10 = Queue(10, q11, False, None, True)
     q9 = Queue(9, q10, False, None, True)
+
     """
 
     #Livmorhals
@@ -767,7 +767,7 @@ def main():
     q13.probability_of_treatment_queues = [0.3,0.7,0]
     """
     q3.potential_treatment_queues = [q4,q9]
-    q3.probability_of_treatment_queues = [0.25,0.25,0.5]
+    q3.probability_of_treatment_queues = [0.5,0.5,0]
 
 
 
@@ -785,7 +785,7 @@ def main():
     N = M = 28
     shift = 6
 
-    simulation_horizon = 40
+    simulation_horizon = 4
     percentage_increase_in_capacity = 0
     no_show_percentage = 0
 

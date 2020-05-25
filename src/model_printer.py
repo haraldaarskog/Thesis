@@ -99,12 +99,13 @@ def create_overview_table(new_patient_arrivals, sum_E, sum_G):#, sum_exit_diagno
 def print_resource_utilization(J, T, b_jt):
     print("Printing resource utilization:")
     number_of_resources = mp.L_rt.shape[0]
+    H_jr = mf.create_H_jr()
     for r in range(number_of_resources):
         for t in range(T):
             sum = 0
             for j in range(J):
                 try:
-                    sum += b_jt[j, t] * mp.H_jr[j, r]
+                    sum += b_jt[j, t] * H_jr[j, r]
                 except Exception as e:
                     continue
             if sum > 0:

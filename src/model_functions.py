@@ -395,10 +395,13 @@ def create_M_j():
     Queues = get_total_number_of_queues()
     for i in range(Queues):
         g, a = find_ga(i)
+        m_dict[i] = mp.activity_recovery_time[a]
+        """
         if queue_is_treatment(i):
             m_dict[i] = mp.treatment_recovery_times[a]
         else:
             m_dict[i] = mp.diagnosis_recovery_times[a]
+        """
     return m_dict
 
 
@@ -433,7 +436,22 @@ def create_K_parameter(start_value, increase_per_week, time_periods):
         k_dict[t] = value
     return k_dict
 
+
+
+
+def create_H_jr():
+    act_dict = mp.activity_dict
+    act_res_dict = mp.activity_resource_dict
+    number_of_queues = get_total_number_of_queues()
+    number_of_resources = mp.L_rt.shape[0]
+    H_jr = np.zeros((number_of_queues,number_of_resources))
+    for j in range(number_of_queues):
+        g, a = find_ga(j)
+        dict_of_resources = act_res_dict[a]
+        for r in range(number_of_resources):
+            if r in dict_of_resources.keys():
+                H_jr[j,r] = dict_of_resources[r]
+    return H_jr
+
 if __name__ == '__main__':
-    for i in range(53):
-        j=15
-        print(i,j,create_Q_ij()[i,j])
+    print(create_H_jr())

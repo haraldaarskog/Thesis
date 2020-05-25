@@ -63,13 +63,13 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
 
     Patient_arrivals_jt = mp.Patient_arrivals_jt
     M_j = mf.create_M_j()
-    H_jr = mp.H_jr
     L_rt = mp.L_rt
     Time_limits_j = mp.Time_limits_j
-    K_t = mf.create_K_parameter(start_value = 10, increase_per_week = 0.5, time_periods = Time_periods)
+    K_t = mf.create_K_parameter(start_value = 100, increase_per_week = 0.5, time_periods = Time_periods)
     Q_ij = mf.create_Q_ij()
     queue_to_path = mf.create_queue_to_path(total_queues)
     probability_of_path = mp.probability_of_path
+    H_jr = mf.create_H_jr()
 
     #if the model is executed with RH, the input from previous runs are included
     #otherwise, the input from previous runs are all zero.
@@ -131,11 +131,7 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
         if not in_iteration == True:
             print("Generating variables:", end_variables - start_variables)
         #******************** Objective function ********************
-        if not in_iteration or weights is None:
-            model.setObjective(gp.quicksum(mof.obj_weights_m(j, m) * q_variable[j, t, n, m]  for j in range(total_queues) for t in range(Time_periods) for n in range(N) for m in range(M)), GRB.MINIMIZE)
-
-        else:
-            model.setObjective(gp.quicksum(weights[m] * q_variable[j, t, n, m]  for j in range(total_queues) for t in range(Time_periods) for n in range(N) for m in range(M)), GRB.MINIMIZE)
+        model.setObjective(gp.quicksum(mof.obj_weights_m(j, m) * q_variable[j, t, n, m]  for j in range(total_queues) for t in range(Time_periods) for n in range(N) for m in range(M)), GRB.MINIMIZE)
 
         #******************** Constraints ********************
 
@@ -194,8 +190,8 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
 
 
         #Resource constraints
-        for t in range(Time_periods):
-            for r in range(Resources):
+        for r in range(Resources):
+            for t in range(Time_periods):
                 model.addConstr(gp.quicksum(H_jr[j, r] * b_variable[j, t] for j in range(total_queues)) <=  L_rt[r, t % week_length])
 
 
@@ -283,7 +279,7 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
 
     b_variable = mf.convert_dict(b_variable)
     q_variable = mf.convert_dict(q_variable)
-    #mop.print_resource_utilization(total_queues, Time_periods,b_variable)
+    mop.print_resource_utilization(total_queues, Time_periods,b_variable)
     #print(discharged + sum_exit_treatment)
     total_elapsed_time = time.time() - overall_start
     #tar noe tid
@@ -294,7 +290,7 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
 
 #Running the model
 def run_model():
-    w = 1
+    w = 3
     optimize_model(weeks = w, N_input = 10, M_input = 10, shift = 1, with_rolling_horizon = False, in_iteration = False, weights = None, E = None, G = None)
 
 if __name__ == '__main__':
