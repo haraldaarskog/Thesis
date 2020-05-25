@@ -452,6 +452,6 @@ def create_H_jr():
             if r in dict_of_resources.keys():
                 H_jr[j,r] = dict_of_resources[r]
     return H_jr
-
+    
 if __name__ == '__main__':
     print(create_H_jr())

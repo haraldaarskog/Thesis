@@ -196,7 +196,7 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
 
 
         #Time limit constraints
-        for j in range(total_diagnosis_queues):
+        for j in range(total_queues):
             for t in range(Time_periods):
                 for n in range(N):
                     for m in range(M):
@@ -279,7 +279,7 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
 
     b_variable = mf.convert_dict(b_variable)
     q_variable = mf.convert_dict(q_variable)
-    mop.print_resource_utilization(total_queues, Time_periods,b_variable)
+    #mop.print_resource_utilization(total_queues, Time_periods,b_variable)
     #print(discharged + sum_exit_treatment)
     total_elapsed_time = time.time() - overall_start
     #tar noe tid
@@ -290,7 +290,7 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
 
 #Running the model
 def run_model():
-    w = 3
+    w = 2
     optimize_model(weeks = w, N_input = 10, M_input = 10, shift = 1, with_rolling_horizon = False, in_iteration = False, weights = None, E = None, G = None)
 
 if __name__ == '__main__':

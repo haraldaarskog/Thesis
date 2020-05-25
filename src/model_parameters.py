@@ -21,18 +21,18 @@ activity_dict={
 #Patient processes. Patient process on rows, activity on columns
 #1 if patient process conducts activity, 0 otherwise
 diagnostic_processes = np.array([
-        [0,1,2,3], #Livmor. 0/3
-        [0,6,4,3,7], #Livmorhals. Start: 4/8
-        [0,2,6,5]]) #Eggstokk. Start: 9/13
+        [0,1,2,3]]) #Livmor. 0/3
+        #[0,6,4,3,7], #Livmorhals. Start: 4/8
+        #[0,2,6,5]]) #Eggstokk. Start: 9/12
 
 treatment_processes = np.array([
         [6,1,12,9,12], #13/17: Livmor, høyrisiko
-        [6,1,12,9,12,8], #18/23: Livmor: tilleggsbehandling, cellegift
-        [12,9,12], #24/26:Livmorhals
-        [12,9,12,5,10], #27/31: Livmorhals
-        [3,8,10,14,10,13,8,4], #32/39: Livmorhals
-        [6,8,12,9,12,6,8], #40/46: Eggstokk
-        [12,9,12,6,8]]) #47/51: Eggstokk
+        [6,1,12,9,12,8]]) #18/23: Livmor: tilleggsbehandling, cellegift
+        #[12,9,12], #24/26:Livmorhals
+        #[12,9,12,5,10], #27/31: Livmorhals
+        #[3,8,10,14,10,13,8,4], #32/39: Livmorhals
+        #[6,8,12,9,12,6,8], #40/46: Eggstokk
+        #[12,9,12,6,8]]) #47/51: Eggstokk
 
 
 #patient processes on rows, treatment paths on columns. Det entries denotes the
@@ -89,10 +89,26 @@ Patient_arrivals_jt=np.matrix([
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0]])
 
+#Max Time Limit
+m = 50
+#First Time Limit
+f = 100
+#Second Time Limit
+s = 22
+#Third Time Limit
+t = 36
 #Max number of days allowed before activity a
-Time_limits_j = np.array(
-[100,100,100,100,100,100,100,100,100,100,100,100,100,100])
-#[100,6,100,22,100,6,100,100,22,100,6,100,100,22])
+Time_limits_j = np.array([
+m,f,m,s,
+m,f,m,m,s,
+m,f,m,s,
+t,m,m,m,m,
+t,m,m,m,m,m,
+t,m,m,
+t,m,m,m,m,
+t,m,m,m,m,m,m,m,
+t,m,m,m,m,m,m,
+t,m,m,m,m])
 
 
 
