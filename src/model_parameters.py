@@ -26,13 +26,13 @@ diagnostic_processes = np.array([
         #[0,2,6,5]]) #Eggstokk. Start: 9/12
 
 treatment_processes = np.array([
-        [6,1,12,9,12], #13/17: Livmor, høyrisiko
-        [6,1,12,9,12,8]]) #18/23: Livmor: tilleggsbehandling, cellegift
-        #[12,9,12], #24/26:Livmorhals
-        #[12,9,12,5,10], #27/31: Livmorhals
+        [6,1,9], #13/17: Livmor, høyrisiko
+        [6,1,9,8,8]]) #18/23: Livmor: tilleggsbehandling, cellegift
+        #[9], #24/26:Livmorhals
+        #[9,5,10], #27/31: Livmorhals
         #[3,8,10,14,10,13,8,4], #32/39: Livmorhals
-        #[6,8,12,9,12,6,8], #40/46: Eggstokk
-        #[12,9,12,6,8]]) #47/51: Eggstokk
+        #[6,8,9,6,8], #40/46: Eggstokk
+        #[9,6,8]]) #47/51: Eggstokk
 
 
 #patient processes on rows, treatment paths on columns. Det entries denotes the
@@ -55,10 +55,10 @@ activity_recovery_time = {
 7: 1,
 8: 7,
 9: 4,
-10: 2,
+10: 0,
 11: 0,
 12: 1,
-13: 3,
+13: 0,
 14: 0
 }
 
@@ -89,14 +89,15 @@ Patient_arrivals_jt=np.matrix([
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0]])
 
+
 #Max Time Limit
 m = 50
 #First Time Limit
-f = 100
+f = 600
 #Second Time Limit
-s = 22
+s = 2200
 #Third Time Limit
-t = 36
+t = 3600
 #Max number of days allowed before activity a
 Time_limits_j = np.array([
 m,f,m,s,
@@ -113,7 +114,8 @@ t,m,m,m,m])
 
 
 #Resource capacity for resource r at day t in a week
-#L_rt = np.concatenate((np.full((100,5),100), np.full((100,2),0)), axis=1)
+L_rt = np.concatenate((np.full((100,5),100), np.full((100,2),0)), axis=1)
+"""
 L_rt = np.array([
         [8,8,8,8,8,0,0],
         [8,8,8,8,8,0,0],
@@ -132,7 +134,7 @@ L_rt = np.array([
         [8,8,8,8,8,0,0],
         [8,8,8,8,8,0,0]])
 
-
+"""
 
 resource_dict={
 ###Staff
@@ -159,17 +161,17 @@ activity_resource_dict = {
 0: {},
 1: {1:1, 6:2, 11:1},
 2: {1:1, 4:1, 10:1},
-3: {2:1,3:2,7:1},
-4: {2:1, 3:2, 8:1},
-5: {0: 5, 15: 1},
-6: {0:1, 6:1, 11:1},
-7: {0:1, 1:1 ,6:4, 9:1},
-8: {0:1, 6:1, 13:1},
-9: {0:3, 6:3, 9:1},
+3: {2:0.5, 3:1, 7:0.5},
+4: {2:0.5, 3:1, 8:0.5},
+5: {0:5, 15:1},
+6: {0:0.5, 6:0.5, 11:0.5},
+7: {0:1, 1:1, 6:4, 9:1},
+8: {0:4, 6:4, 13:4},
+9: {0:3, 6:3, 9:3},
 10: {2:1, 3: 1, 14: 1},
 11: {},
 12: {0:1, 6:1},
-13: {2: 1, 3: 1, 14: 1},
-14: {0: 1, 11: 1}
+13: {2:1, 3:1, 14:1},
+14: {0:0.5, 11:0.5}
 
 }

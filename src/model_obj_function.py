@@ -6,6 +6,7 @@ import main_model as mm
 
 
 def obj_weights(j, n):
+
     if mf.queue_is_treatment(j):
         return np.power(n,1)
     else:
@@ -13,9 +14,9 @@ def obj_weights(j, n):
 
 def obj_weights_m(j, m):
     if mf.queue_is_treatment(j):
-        return np.power(m,1)
+        return np.power(m, 1)
     else:
-        return np.power(m,1)
+        return np.power(m, 1)
 
 def is_queue_current(j, current_diagnosis_queues):
     if j < current_diagnosis_queues or (j >= mf.get_total_number_of_diagnosis_queues() and j < mf.get_total_number_of_queues()):

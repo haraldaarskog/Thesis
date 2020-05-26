@@ -799,10 +799,10 @@ def main():
     weeks = 2
     G = None
     E = None
-    N = M = 28
+    N = M = 20
     shift = 6
 
-    simulation_horizon = 33
+    simulation_horizon = 20
 
     percentage_increase_in_capacity = 0
     no_show_percentage = 0
