@@ -27,7 +27,7 @@ diagnostic_processes = np.array([
 
 treatment_processes = np.array([
         [6,1,9], #13/17: Livmor, høyrisiko
-        [6,1,9,8,8]]) #18/23: Livmor: tilleggsbehandling, cellegift
+        [6,1,9,8,8,8,8]]) #18/23: Livmor: tilleggsbehandling, cellegift
         #[9], #24/26:Livmorhals
         #[9,5,10], #27/31: Livmorhals
         #[3,8,10,14,10,13,8,4], #32/39: Livmorhals
@@ -91,7 +91,7 @@ Patient_arrivals_jt=np.matrix([
 
 
 #Max Time Limit
-m = 50
+m = 500
 #First Time Limit
 f = 600
 #Second Time Limit

@@ -60,7 +60,7 @@ class Simulation:
                 if (j, t, m) not in g_dict.keys():
                     g_dict[j,t,m] = 1
                 else:
-                    g_dict[j,t,m] = g[j,t,m] + 1
+                    g_dict[j,t,m] = g_dict[j,t,m] + 1
         return g_dict
 
     def create_E_matrix(self):
@@ -266,7 +266,7 @@ class Simulation:
 
 
 class Queue:
-    def __init__(self, id, next_Queue, is_incoming_queue, arrival_rate, is_treatment_queue):
+    def __init__(self, id, next_Queue, is_incoming_queue, arrival_rate, is_treatment_queue, recovery_days):
         self.id = id
         self.day = 0
         self.is_treatment_queue = is_treatment_queue
@@ -283,7 +283,7 @@ class Queue:
         self.num_arrivals = 0
         self.num_departs = 0
         self.next_Queue = next_Queue
-        self.num_recovery_days = 0
+        self.num_recovery_days = recovery_days
         self.appointments = []
         self.appointment_capacity = 0
         self.appointment_dict = {}
@@ -679,27 +679,26 @@ def main():
     start_time=time.time()
 
     #Livmor
-    q3 = Queue(3, None, False, None, False)
-    q2 = Queue(2, q3, False, None, False)
-    q1 = Queue(1, q2, False, None, False)
-    q0 = Queue(0, q1, True, 4/7, False)
+    q3 = Queue(3, None, False, None, False, 0)
+    q2 = Queue(2, q3, False, None, False, 0)
+    q1 = Queue(1, q2, False, None, False, 0)
+    q0 = Queue(0, q1, True, 4/7, False, 0)
 
 
 
     #Livmor_treat 1
-    q8 = Queue(8, None, False, None, True)
-    q7 = Queue(7, q8, False, None, True)
-    q6 = Queue(6, q7, False, None, True)
-    q5 = Queue(5, q6, False, None, True)
-    q4 = Queue(4, q5, False, None, True)
+    q6 = Queue(6, None, False, None, True, 4)
+    q5 = Queue(5, q6, False, None, True, 0)
+    q4 = Queue(4, q5, False, None, True, 0)
 
     #Livmor_treat 2
-    q14 = Queue(14, None, False, None, True)
-    q13 = Queue(13, q14, False, None, True)
-    q12 = Queue(12, q13, False, None, True)
-    q11 = Queue(11, q12, False, None, True)
-    q10 = Queue(10, q11, False, None, True)
-    q9 = Queue(9, q10, False, None, True)
+    q13 = Queue(13, None, False, None, True, 7)
+    q12 = Queue(12, q13, False, None, True, 7)
+    q11 = Queue(11, q12, False, None, True, 7)
+    q10 = Queue(10, q11, False, None, True, 7)
+    q9 = Queue(9, q10, False, None, True, 4)
+    q8 = Queue(8, q9, False, None, True, 0)
+    q7 = Queue(7, q8, False, None, True, 0)
 
     """
 
@@ -782,30 +781,32 @@ def main():
     q13.probability_of_treatment_queues = [0.3,0.7,0]
 
     """
-    q3.potential_treatment_queues = [q4, q9]
+    q3.potential_treatment_queues = [q4, q7]
     q3.probability_of_treatment_queues = [0.5,0.5,0]
 
 
 
 
     #arr = [q0,q1,q2,q3,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24]#,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13]
-    arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13,q14]#,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24,q25,q26,q27,q28,q29,q30,q31,q32,q33,q34,q35,q36,q37,q38,q39,q40,q41,q42,q43,q44,q45,q46,q47,q48,q49,q50,q51]
+    arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13]#,q14]#,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24,q25,q26,q27,q28,q29,q30,q31,q32,q33,q34,q35,q36,q37,q38,q39,q40,q41,q42,q43,q44,q45,q46,q47,q48,q49,q50,q51]
 
 
     #scheduled_appointments = np.full((100,100), 1)
     #scheduled_appointments = np.random.randint(2, size = (70, 10000))
 
-
+    #Optimization param
     weeks = 2
     G = None
     E = None
-    N = M = 20
+    M = 40
+    N = int(np.round(M*1/3))
     shift = 6
 
-    simulation_horizon = 20
-
+    #Simulation param
+    simulation_horizon = 100
     percentage_increase_in_capacity = 0
     no_show_percentage = 0
+
     number_of_queues = mf.get_total_number_of_queues()
 
 
