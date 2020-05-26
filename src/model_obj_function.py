@@ -6,7 +6,6 @@ import main_model as mm
 
 
 def obj_weights(j, n):
-
     if mf.queue_is_treatment(j):
         return np.power(n,1)
     else:

@@ -35,6 +35,7 @@ class Simulation:
         self.distribute_appointments()
         self.total_patients_generated = 0
         self.total_patients_exited = 0
+        self.serviced_patient_history = {}
         self.patient_exit_list = []
 
 
@@ -234,6 +235,11 @@ class Simulation:
 
         else:
             dep_patient = next_departure_queue.handle_depart_event(self.time)
+            if dep_patient != -1:
+                if self.day in self.serviced_patient_history.keys():
+                    self.serviced_patient_history[self.day] = self.serviced_patient_history[self.day] + 1
+                else:
+                     self.serviced_patient_history[self.day] = 1
             if next_departure_queue.is_last_queue and dep_patient != -1 and next_departure_queue.is_treatment_queue:
                 self.total_patients_exited += 1
                 self.patient_exit_list.append(dep_patient)
@@ -625,7 +631,7 @@ def create_graph_1(s):
     plt.legend(loc='best')
     plt.title('Simulation')
     plt.grid(True)
-    plt.savefig('simulation/sim_figures/simulation_1.png')
+    plt.savefig('simulation/sim_figures/simulation_every_queue.png')
     plt.close()
 
 def create_graph_2(s):
@@ -636,18 +642,18 @@ def create_graph_2(s):
     plt.legend(loc='best')
     plt.title('Simulation')
     plt.grid(True)
-    plt.savefig('simulation/sim_figures/simulation_2.png')
+    plt.savefig('simulation/sim_figures/simulation_total_in_system.png')
+    plt.close()
 
 def create_graph_3(s, diagnosis):
-    uterin_cancer=[0,1,2,3,14,15,16,17,18,19,20,21,22,23,24]
+    uterin_cancer = [0,1,2,3,14,15,16,17,18,19,20,21,22,23,24]
     cerivcal_cancer = [4,5,6,7,8,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]
-    ovarian_cancer=[9,10,11,12,13,41,42,43,44,45,46,47,48,49,50,51]
+    ovarian_cancer = [9,10,11,12,13,41,42,43,44,45,46,47,48,49,50,51]
 
     for queue in s.all_queues:
         if queue.id in uterin_cancer and diagnosis == "uterin":
             dev = s.queue_development[queue.id]
             plt.plot(s.day_array, dev,linestyle='-', label="Queue " + str(queue.id))
-
 
         if queue.id in cerivcal_cancer and diagnosis == "cervical":
             dev = s.queue_development[queue.id]
@@ -659,15 +665,55 @@ def create_graph_3(s, diagnosis):
             plt.plot(s.day_array, dev,linestyle='-', label="Queue " + str(queue.id))
 
     plt.xlabel('Days')
-    plt.ylabel('Number of patients in queue')
+    plt.ylabel('Number of patients in different pathways')
     plt.legend(loc='best')
     plt.title('Simulation')
     plt.grid(True)
-    plt.savefig("simulation/sim_figures/simulation_"+diagnosis+".png")
+    plt.savefig("simulation/sim_figures/simulation_3.png")
     plt.close()
 
 
 
+def create_cum(simulation_model, m_range):
+    exit_patients = simulation_model.patient_exit_list
+    m_array = np.zeros(m_range)
+    m_array_2 = np.arange(0,m_range)
+    for patient in exit_patients:
+        m_value = patient.number_of_days_in_system
+        m_array[m_value] += 1
+
+    sum_array = int(np.sum(m_array))
+    cum = np.divide(np.cumsum(m_array), sum_array)
+
+    plt.plot(m_array_2, cum, linestyle='-')
+    plt.xlabel('Days')
+    plt.ylabel('Share of total patient exits')
+    plt.legend(loc='best')
+    plt.title('Cumulative distribution with '+str(sum_array)+' exits')
+    plt.grid(True)
+    plt.savefig("simulation/sim_figures/simulation_cumulative.png")
+    plt.close()
+
+def create_capacity_graph(sim, day_horizon):
+    used_capacity = np.zeros(day_horizon)
+    flag = True
+    for queue in sim.all_queues:
+        if flag:
+            total_capacity = np.zeros(len(queue.appointments))
+            flag = False
+        total_capacity += queue.appointments
+    for key in sim.serviced_patient_history:
+        used_capacity[key] = sim.serviced_patient_history[key]
+
+    plt.plot(sim.day_array[1:], total_capacity, linestyle='-', label="Total queue capacity")
+    plt.plot(sim.day_array[1:], used_capacity, linestyle='-', label = "Patients serviced")
+    plt.xlabel('Days')
+    plt.ylabel('Number of patients')
+    plt.legend(loc='best')
+    plt.title('Simulation')
+    plt.grid(True)
+    plt.savefig("simulation/sim_figures/simulation_capacity.png")
+    plt.close()
 
 def main():
     np.random.seed(0)
@@ -794,11 +840,11 @@ def main():
     G = None
     E = None
     M = 40
-    N = int(np.round(M*1/3))
+    N = int(np.round(M*4/5))
     shift = 6
 
     #Simulation param
-    simulation_horizon = 100
+    simulation_horizon = 1000
     percentage_increase_in_capacity = 0
     no_show_percentage = 0
 
@@ -822,22 +868,31 @@ def main():
             print("E:",E)
             print("G:",G)
 
+            create_capacity_graph(s, i + 1)
             _, b_variable, _ = mm.optimize_model(weeks = weeks, N_input = N, M_input = M, shift = shift, with_rolling_horizon = True, in_iteration = False, weights = None, G = G, E = E)
             scheduled_appointments = mf.from_dict_to_matrix_2(b_variable,(number_of_queues, weeks*7))
             scheduled_appointments = scheduled_appointments[:,:7]
             s.update_appointments(scheduled_appointments)
+            create_graph_2(s)
+            create_cum(s, M)
+
+
+
+
+
+
 
 
     print("\nSimulation time:", time.time() - start_time)
     create_graph_1(s)
-    create_graph_2(s)
+
 
     print("Generated:",s.total_patients_generated)
     print("Exited:",s.total_patients_exited)
     print("Discharged from diagnosis:",s.summarize_discharged_from_diagnosis())
     if s.total_patients_generated > 0:
         print("Exited/generated:",(s.total_patients_exited + s.summarize_discharged_from_diagnosis())/s.total_patients_generated)
-    print(s.get_info_about_every_patient_in_system())
+    #print(s.get_info_about_every_patient_in_system())
     print(s.patient_exit_list)
     for p in s.patient_exit_list:
         print(p, p.queue_history)

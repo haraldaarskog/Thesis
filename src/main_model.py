@@ -82,7 +82,7 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
             E_jnm = np.zeros((total_queues, N, M))
             G_jtm = np.zeros((total_queues, Time_periods, M))
         else:
-            E_jnm = mf.from_dict_to_matrix_2(E, (total_queues,N,M))
+            E_jnm = mf.from_dict_to_matrix_2(E, (total_queues, N, M))
             G_jtm = mf.from_dict_to_matrix_2(G, (total_queues,Time_periods,M))
 
     else:
