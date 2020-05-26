@@ -629,15 +629,10 @@ def create_graph_1(s):
     plt.close()
 
 def create_graph_2(s):
-    for queue in s.all_queues:
-        dev = queue.queue_graph
-        dev = np.asarray(dev)
-        x_ax = dev[:,0]
-        y_ax = dev[:,1]
-        plt.plot(x_ax, y_ax,linestyle='-', label="Queue " + str(queue.id))
+    plt.plot(s.day_array, s.total_num_in_queue, linestyle='-')
 
     plt.xlabel('Days')
-    plt.ylabel('Number of patients in queue')
+    plt.ylabel('Total number of patients in queue')
     plt.legend(loc='best')
     plt.title('Simulation')
     plt.grid(True)
@@ -835,6 +830,7 @@ def main():
 
     print("\nSimulation time:", time.time() - start_time)
     create_graph_1(s)
+    create_graph_2(s)
 
     print("Generated:",s.total_patients_generated)
     print("Exited:",s.total_patients_exited)
