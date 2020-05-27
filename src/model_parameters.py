@@ -1,4 +1,5 @@
 import numpy as np
+import simulation as sim
 
 activity_dict={
 0: "Referral",
@@ -68,22 +69,30 @@ week_length = 7
 
 
 
-
+#WEEKLY PATIENT DEMAND
+uterin_demand = 4
+cervical_demand = 3
+ovarian_demand = 4
 
 
 
 #New demand in queue j in time period t
+ud = uterin_demand/5
+cd = cervical_demand/5
+od = ovarian_demand/5
+
+
 Patient_arrivals_jt=np.matrix([
-        [0.8,0.8,0.8,0.8,0.8,0,0],#
+        [ud,ud,ud,ud,ud,0,0],#
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
-        [0.6,0.6,0.6,0.6,0.6,0,0],#
+        [cd,cd,cd,cd,cd,0,0],#
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
-        [0.8,0.8,0.8,0.8,0.8,0,0],#
+        [od,od,od,od,od,0,0],#
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],

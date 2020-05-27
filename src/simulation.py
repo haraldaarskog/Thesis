@@ -645,31 +645,45 @@ def create_graph_2(s):
     plt.savefig('simulation/sim_figures/simulation_total_in_system.png')
     plt.close()
 
-def create_graph_3(s, diagnosis):
-    uterin_cancer = [0,1,2,3,14,15,16,17,18,19,20,21,22,23,24]
-    cerivcal_cancer = [4,5,6,7,8,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]
-    ovarian_cancer = [9,10,11,12,13,41,42,43,44,45,46,47,48,49,50,51]
+def create_graph_3(s):
+    uterin_cancer = [0,1,2,3,13,14,15,16,17,18,19]
+    cerivcal_cancer = [4,5,6,7,8,20,21,22,23,24,25,26,27,28,29,30,31]
+    ovarian_cancer = [9,10,11,12,32,33,34,35,36,37,38,39]
+
+    uterin_flag = True
+    cervical_flag = True
+    ovarian_flag = True
 
     for queue in s.all_queues:
-        if queue.id in uterin_cancer and diagnosis == "uterin":
-            dev = s.queue_development[queue.id]
-            plt.plot(s.day_array, dev,linestyle='-', label="Queue " + str(queue.id))
-
-        if queue.id in cerivcal_cancer and diagnosis == "cervical":
-            dev = s.queue_development[queue.id]
-            plt.plot(s.day_array, dev,linestyle='-', label="Queue " + str(queue.id))
+        if queue.id in uterin_cancer:
+            if uterin_flag:
+                uterin_dev = np.zeros(len(s.queue_development[queue.id]))
+                uterin_flag = False
+            uterin_dev += s.queue_development[queue.id]
 
 
-        if queue.id in ovarian_cancer and diagnosis == "ovarian":
-            dev = s.queue_development[queue.id]
-            plt.plot(s.day_array, dev,linestyle='-', label="Queue " + str(queue.id))
+        if queue.id in cerivcal_cancer:
+            if cervical_flag:
+                cervical_dev = np.zeros(len(s.queue_development[queue.id]))
+                cervical_flag = False
+            cervical_dev += s.queue_development[queue.id]
 
+
+        if queue.id in ovarian_cancer:
+            if ovarian_flag:
+                ovarian_dev = np.zeros(len(s.queue_development[queue.id]))
+                ovarian_flag = False
+            ovarian_dev += s.queue_development[queue.id]
+
+    plt.plot(s.day_array, uterin_dev, linestyle='-', label="Uterin cancer")
+    plt.plot(s.day_array, cervical_dev, linestyle='-', label="Cerivcal cancer")
+    plt.plot(s.day_array, ovarian_dev, linestyle='-', label="Ovarian cancer")
     plt.xlabel('Days')
     plt.ylabel('Number of patients in different pathways')
     plt.legend(loc='best')
     plt.title('Simulation')
     plt.grid(True)
-    plt.savefig("simulation/sim_figures/simulation_3.png")
+    plt.savefig("simulation/sim_figures/all_pathways.png")
     plt.close()
 
 
@@ -721,11 +735,16 @@ def main():
 
     art = mp.activity_recovery_time
 
+    #Patient demand
+    uterin_demand = mp.uterin_demand
+    cervical_demand = mp.cervical_demand
+    ovarian_demand = mp.ovarian_demand
+
     #Livmor
     q3 = Queue(3, None, False, None, False, art[3])
     q2 = Queue(2, q3, False, None, False, art[2])
     q1 = Queue(1, q2, False, None, False, art[1])
-    q0 = Queue(0, q1, True, 4/7, False, art[0])
+    q0 = Queue(0, q1, True, uterin_demand/7, False, art[0])
 
 
     """
@@ -750,13 +769,13 @@ def main():
     q7 = Queue(7, q8, False, None, False, art[3])
     q6 = Queue(6, q7, False, None, False, art[4])
     q5 = Queue(5, q6, False, None, False, art[6])
-    q4 = Queue(4, q5, True, 3/7, False, art[0])
+    q4 = Queue(4, q5, True, cervical_demand/7, False, art[0])
 
     #Eggstokk
     q12 = Queue(12, None, False, None, False, art[5])
     q11 = Queue(11, q12, False, None, False, art[6])
     q10 = Queue(10, q11, False, None, False, art[2])
-    q9 = Queue(9, q10, True, 4/7, False, art[0])
+    q9 = Queue(9, q10, True, ovarian_demand/7, False, art[0])
 
 
     #Treatment path: Livmor 1
@@ -802,14 +821,14 @@ def main():
     q38 = Queue(38, q39, False, None, True, art[6])
     q37 = Queue(37, q38, False, None, True, art[9])
 
-    q3.potential_treatment_queues = [q13,q16]
-    q3.probability_of_treatment_queues = [0.35,0.15,0.5]
+    q3.potential_treatment_queues = [q13, q16]
+    q3.probability_of_treatment_queues = [0.35, 0.15, 0.5]
 
     q8.potential_treatment_queues = [q20, q21, q24]
-    q8.probability_of_treatment_queues = [7/24,1/24,2/3,0]
+    q8.probability_of_treatment_queues = [7/24, 1/24, 2/3, 0]
 
-    q13.potential_treatment_queues = [q32, q37]
-    q13.probability_of_treatment_queues = [0.3,0.7,0]
+    q12.potential_treatment_queues = [q32, q37]
+    q12.probability_of_treatment_queues = [0.3, 0.7, 0]
 
     """
     q3.potential_treatment_queues = [q4, q7]
@@ -823,12 +842,12 @@ def main():
     #scheduled_appointments = np.random.randint(2, size = (70, 10000))
 
     #Optimization param
-    weeks = 2
+    weeks = 1
     G = None
     E = None
     M = 40
     N = int(np.round(M*4/5))
-    shift = 6
+    shift = 5#6
 
     #Simulation param
     simulation_horizon = 1000
@@ -862,6 +881,7 @@ def main():
             s.update_appointments(scheduled_appointments)
             create_graph_2(s)
             create_cum(s, M)
+            create_graph_3(s)
 
 
 
