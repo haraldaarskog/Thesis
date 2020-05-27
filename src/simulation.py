@@ -719,14 +719,16 @@ def main():
     np.random.seed(0)
     start_time=time.time()
 
+    art = mp.activity_recovery_time
+
     #Livmor
-    q3 = Queue(3, None, False, None, False, 0)
-    q2 = Queue(2, q3, False, None, False, 0)
-    q1 = Queue(1, q2, False, None, False, 0)
-    q0 = Queue(0, q1, True, 4/7, False, 0)
+    q3 = Queue(3, None, False, None, False, art[3])
+    q2 = Queue(2, q3, False, None, False, art[2])
+    q1 = Queue(1, q2, False, None, False, art[1])
+    q0 = Queue(0, q1, True, 4/7, False, art[0])
 
 
-
+    """
     #Livmor_treat 1
     q6 = Queue(6, None, False, None, True, 4)
     q5 = Queue(5, q6, False, None, True, 0)
@@ -744,92 +746,77 @@ def main():
     """
 
     #Livmorhals
-    q8 = Queue(8, None, False, None, False)
-    q7 = Queue(7, q8, False, None, False)
-    q6 = Queue(6, q7, False, None, False)
-    q5 = Queue(5, q6, False, None, False)
-    q4 = Queue(4, q5, True, 3/7, False)
+    q8 = Queue(8, None, False, None, False, art[7])
+    q7 = Queue(7, q8, False, None, False, art[3])
+    q6 = Queue(6, q7, False, None, False, art[4])
+    q5 = Queue(5, q6, False, None, False, art[6])
+    q4 = Queue(4, q5, True, 3/7, False, art[0])
 
     #Eggstokk
-    q12 = Queue(12, None, False, None, False)
-    q11 = Queue(11, q12, False, None, False)
-    q10 = Queue(10, q11, False, None, False)
-    q9 = Queue(9, q10, True, 4/7, False)
+    q12 = Queue(12, None, False, None, False, art[5])
+    q11 = Queue(11, q12, False, None, False, art[6])
+    q10 = Queue(10, q11, False, None, False, art[2])
+    q9 = Queue(9, q10, True, 4/7, False, art[0])
 
 
     #Treatment path: Livmor 1
-    q17 = Queue(17, None, False, None, True)
-    q16 = Queue(16, q17, False, None, True)
-    q15 = Queue(15, q16, False, None, True)
-    q14 = Queue(14, q15, False, None, True)
-    q13 = Queue(13, q14, False, None, True)
+    q15 = Queue(15, None, False, None, True, art[9])
+    q14 = Queue(14, q15, False, None, True, art[1])
+    q13 = Queue(13, q14, False, None, True, art[6])
 
     #Treatment path: Livmor 2
-    q23 = Queue(23, None, False, None, True)
-    q22 = Queue(22, q23, False, None, True)
-    q21 = Queue(21, q22, False, None, True)
-    q20 = Queue(20, q21, False, None, True)
-    q19 = Queue(19, q20, False, None, True)
-    q18 = Queue(18, q19, False, None, True)
+    q19 = Queue(19, None, False, None, True, art[8])
+    q18 = Queue(18, q19, False, None, True, art[9])
+    q17 = Queue(17, q18, False, None, True, art[1])
+    q16 = Queue(16, q17, False, None, True, art[6])
 
 
 
     #Treatment path: Livmorhals 1
-    q26 = Queue(26, None, False, None, True)
-    q25 = Queue(25, q26, False, None, True)
-    q24 = Queue(24, q25, False, None, True)
+    q20 = Queue(20, None, False, None, True,art[9])
 
     #Treatment path: Livmorhals 2
-    q31 = Queue(31, None, False, None, True)
-    q30 = Queue(30, q31, False, None, True)
-    q29 = Queue(29, q30, False, None, True)
-    q28 = Queue(28, q29, False, None, True)
-    q27 = Queue(27, q28, False, None, True)
+    q23 = Queue(23, None, False, None, True, art[10])
+    q22 = Queue(22, q23, False, None, True, art[5])
+    q21 = Queue(21, q22, False, None, True, art[9])
 
     #Treatment path: Livmorhals 3
-    q39 = Queue(39, None, False, None, True)
-    q38 = Queue(38, q39, False, None, True)
-    q37 = Queue(37, q38, False, None, True)
-    q36 = Queue(36, q37, False, None, True)
-    q35 = Queue(35, q36, False, None, True)
-    q34 = Queue(34, q35, False, None, True)
-    q33 = Queue(33, q34, False, None, True)
-    q32 = Queue(32, q33, False, None, True)
+    q31 = Queue(31, None, False, None, True, art[4])
+    q30 = Queue(30, q31, False, None, True, art[8])
+    q29 = Queue(29, q30, False, None, True, art[13])
+    q28 = Queue(28, q29, False, None, True, art[10])
+    q27 = Queue(27, q28, False, None, True, art[14])
+    q26 = Queue(26, q27, False, None, True, art[10])
+    q25 = Queue(25, q26, False, None, True, art[8])
+    q24 = Queue(24, q25, False, None, True, art[3])
 
     #Treatment path: Eggstokk 1
-    q46 = Queue(46, None, False, None, True)
-    q45 = Queue(45, q46, False, None, True)
-    q44 = Queue(44, q45, False, None, True)
-    q43 = Queue(43, q44, False, None, True)
-    q42 = Queue(42, q43, False, None, True)
-    q41 = Queue(41, q42, False, None, True)
-    q40 = Queue(40, q41, False, None, True)
+    q36 = Queue(36, None, False, None, True, art[8])
+    q35 = Queue(35, q36, False, None, True, art[6])
+    q34 = Queue(34, q35, False, None, True, art[9])
+    q33 = Queue(33, q34, False, None, True, art[8])
+    q32 = Queue(32, q33, False, None, True, art[6])
 
     #Treatment path: Eggstokk 2
-    q51 = Queue(51, None, False, None, True)
-    q50 = Queue(50, q51, False, None, True)
-    q49 = Queue(49, q50, False, None, True)
-    q48 = Queue(48, q49, False, None, True)
-    q47 = Queue(47, q48, False, None, True)
+    q39 = Queue(39, None, False, None, True, art[8])
+    q38 = Queue(38, q39, False, None, True, art[6])
+    q37 = Queue(37, q38, False, None, True, art[9])
 
-    q3.potential_treatment_queues = [q13,q18]
+    q3.potential_treatment_queues = [q13,q16]
     q3.probability_of_treatment_queues = [0.35,0.15,0.5]
 
-    q8.potential_treatment_queues = [q24, q27, q32]
+    q8.potential_treatment_queues = [q20, q21, q24]
     q8.probability_of_treatment_queues = [7/24,1/24,2/3,0]
 
-    q13.potential_treatment_queues = [q40, q46]
+    q13.potential_treatment_queues = [q32, q37]
     q13.probability_of_treatment_queues = [0.3,0.7,0]
 
     """
     q3.potential_treatment_queues = [q4, q7]
     q3.probability_of_treatment_queues = [0.5,0.5,0]
+    """
 
-
-
-
-    #arr = [q0,q1,q2,q3,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24]#,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13]
-    arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13]#,q14]#,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24,q25,q26,q27,q28,q29,q30,q31,q32,q33,q34,q35,q36,q37,q38,q39,q40,q41,q42,q43,q44,q45,q46,q47,q48,q49,q50,q51]
+    arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24,q25,q26,q27,q28,q29,q30,q31,q32,q33,q34,q35,q36,q37,q38,q39]
 
 
     #scheduled_appointments = np.full((100,100), 1)
