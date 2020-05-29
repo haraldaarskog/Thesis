@@ -645,15 +645,18 @@ def create_graph_1(s):
 
 def create_graph_2(s):
 
-    var = 4
+    var = 15
 
-    cumsum, moving_aves = [0], [0,0,0]
+    cumsum, moving_aves = [0], [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
     for i, x in enumerate(s.total_num_in_queue, 1):
         cumsum.append(cumsum[i - 1] + x)
         if i >= var:
-            moving_ave = (cumsum[i] - cumsum[i-var])/var
+            moving_ave = (cumsum[i] - cumsum[i - var])/var
             #can do stuff with moving_ave here
             moving_aves.append(moving_ave)
+    print(s.day_array)
+    print(moving_aves)
+    print(s.total_num_in_queue)
 
     plt.plot(s.day_array, s.total_num_in_queue, linestyle='-',label="Number of patients")
     plt.plot(s.day_array, moving_aves, linestyle='--', label="Moving average")
@@ -897,7 +900,7 @@ def main():
     G = None
     E = None
     M = 40
-    N = int(np.round(M*4/5))
+    N = int(np.round(M*3/5))
     shift = 5#6
 
     #Simulation param
@@ -930,10 +933,11 @@ def main():
             scheduled_appointments = mf.from_dict_to_matrix_2(b_variable,(number_of_queues, weeks*7))
             scheduled_appointments = scheduled_appointments[:,:7]
             s.update_appointments(scheduled_appointments)
-            create_graph_2(s)
             create_cum(s, M)
-            create_cum_distr_all_diagnosis(s, M)
             create_graph_3(s)
+            create_cum_distr_all_diagnosis(s, M)
+            if i > 6:
+                create_graph_2(s)
 
 
 
