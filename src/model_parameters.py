@@ -70,14 +70,14 @@ week_length = 7
 
 
 #WEEKLY PATIENT DEMAND
-uterin_demand = 4
+uterine_demand = 4
 cervical_demand = 3
 ovarian_demand = 4
 
 
 
 #New demand in queue j in time period t
-ud = uterin_demand/5
+ud = uterine_demand/5
 cd = cervical_demand/5
 od = ovarian_demand/5
 

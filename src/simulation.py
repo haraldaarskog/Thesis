@@ -11,6 +11,8 @@ import names
 
 #TODO: LES LEFTINK
 #TODO: Implementer en metode som beregner total ventetid i systemet. Og gj.sn ventetid/pas
+#TODO: sannsynligheten for å måtte vente. Antall som ved køankomst har ventet/køankomester
+
 
 #Master class
 class Simulation:
@@ -104,11 +106,11 @@ class Simulation:
         sum_arrivals = 0
         for queue in self.all_queues:
             arr = self.queue_development[queue.id]
-            arr.append(queue.get_number_of_patients_in_patientlist_noshowlist())
+            arr.append(queue.get_number_of_patients_in_patientlist_noshow_incoming())#queue.get_number_of_patients_in_patientlist_noshowlist())
             self.queue_development[queue.id] = arr
             sum_arrivals += queue.num_arrivals
             sum_departs += queue.num_departs
-            total_num += queue.get_number_of_patients_in_patientlist_noshowlist()
+            total_num += queue.get_number_of_patients_in_patientlist_noshow_incoming()#queue.get_number_of_patients_in_patientlist_noshowlist()
         self.total_num_in_queue.append(total_num)
         self.num_arrivals_in_system.append(sum_arrivals)
         self.num_departures_in_system.append(sum_departs)
@@ -119,6 +121,7 @@ class Simulation:
             queue.update_appointment_capacity()
             for p in queue.no_show_list:
                 queue.no_show_list.remove(p)
+                p.set_arrival_day_in_current_queue(self.day)
                 queue.patient_list.append(p)
             for patient in queue.patient_list:
                 patient.new_day()
@@ -272,10 +275,11 @@ class Simulation:
 
 
 class Queue:
-    def __init__(self, id, next_Queue, is_incoming_queue, arrival_rate, is_treatment_queue, recovery_days):
+    def __init__(self, id, next_Queue, is_incoming_queue, arrival_rate, is_treatment_queue, recovery_days, diagnosis):
         self.id = id
         self.day = 0
         self.is_treatment_queue = is_treatment_queue
+        self.diagnosis = diagnosis
 
         self.patient_list = []
         self.no_show_list = []
@@ -337,6 +341,9 @@ class Queue:
     def get_number_of_patients_in_patientlist_noshowlist(self):
         return len(self.patient_list) + len(self.no_show_list)
 
+    def get_number_of_patients_in_patientlist_noshow_incoming(self):
+        return len(self.patient_list) + len(self.no_show_list) + len(self.incoming_patients)
+
 
         #finds the next arrival time of today
     def get_next_arrival(self):
@@ -383,7 +390,7 @@ class Queue:
         new_arrivals = np.random.poisson(self.expected_number_of_arrivals_per_day, 1)[0]
         print(new_arrivals,"new arrivals in queue",self.id)
         for i in range(new_arrivals):
-            self.handle_arrival_event(Patient(self.day, names.get_full_name()), 0)
+            self.handle_arrival_event(Patient(self.day, names.get_full_name(), self.diagnosis), 0)
         return new_arrivals
 
     #OTHER
@@ -478,7 +485,8 @@ class Queue:
             print("Queue",self.id,"is empty")
             sys.exit()
 
-        departure_patient = self.get_patient_with_highest_m()
+        #departure_patient = self.get_patient_with_highest_m()
+        departure_patient = self.get_FIFO_patient()
         self.decrease_appointment_capacity()
         if self.no_show_is_happening():
             print("We have a no show!")
@@ -557,10 +565,11 @@ class Queue:
 class Patient:
 
 
-    def __init__(self, day, name):
+    def __init__(self, day, name, diagnosis):
         self.day = day
         self.entering_day = day
         self.name = name
+        self.diagnosis = diagnosis
 
         self.number_of_days_in_queue = 0
         self.number_of_days_in_system = 0
@@ -638,28 +647,28 @@ def create_graph_2(s):
     plt.plot(s.day_array, s.total_num_in_queue, linestyle='-')
 
     plt.xlabel('Days')
-    plt.ylabel('Total number of patients in queue')
+    plt.ylabel('Number of patients')
     plt.legend(loc='best')
-    plt.title('Simulation')
+    plt.title('Total number of patients in queue')
     plt.grid(True)
     plt.savefig('simulation/sim_figures/simulation_total_in_system.png')
     plt.close()
 
 def create_graph_3(s):
-    uterin_cancer = [0,1,2,3,13,14,15,16,17,18,19]
+    uterine_cancer = [0,1,2,3,13,14,15,16,17,18,19]
     cerivcal_cancer = [4,5,6,7,8,20,21,22,23,24,25,26,27,28,29,30,31]
     ovarian_cancer = [9,10,11,12,32,33,34,35,36,37,38,39]
 
-    uterin_flag = True
+    uterine_flag = True
     cervical_flag = True
     ovarian_flag = True
 
     for queue in s.all_queues:
-        if queue.id in uterin_cancer:
-            if uterin_flag:
-                uterin_dev = np.zeros(len(s.queue_development[queue.id]))
-                uterin_flag = False
-            uterin_dev += s.queue_development[queue.id]
+        if queue.id in uterine_cancer:
+            if uterine_flag:
+                uterine_dev = np.zeros(len(s.queue_development[queue.id]))
+                uterine_flag = False
+            uterine_dev += s.queue_development[queue.id]
 
 
         if queue.id in cerivcal_cancer:
@@ -675,13 +684,13 @@ def create_graph_3(s):
                 ovarian_flag = False
             ovarian_dev += s.queue_development[queue.id]
 
-    plt.plot(s.day_array, uterin_dev, linestyle='-', label="Uterin cancer")
+    plt.plot(s.day_array, uterine_dev, linestyle='-', label="Uterin cancer")
     plt.plot(s.day_array, cervical_dev, linestyle='-', label="Cerivcal cancer")
     plt.plot(s.day_array, ovarian_dev, linestyle='-', label="Ovarian cancer")
     plt.xlabel('Days')
-    plt.ylabel('Number of patients in different pathways')
+    plt.ylabel('Number of patients')
     plt.legend(loc='best')
-    plt.title('Simulation')
+    plt.title('Number of patients in the different pathways')
     plt.grid(True)
     plt.savefig("simulation/sim_figures/all_pathways.png")
     plt.close()
@@ -701,11 +710,46 @@ def create_cum(simulation_model, m_range):
 
     plt.plot(m_array_2, cum, linestyle='-')
     plt.xlabel('Days')
-    plt.ylabel('Share of total patient exits')
+    plt.ylabel('Cumulative amount')
     plt.legend(loc='best')
     plt.title('Cumulative distribution with '+str(sum_array)+' exits')
     plt.grid(True)
     plt.savefig("simulation/sim_figures/simulation_cumulative.png")
+    plt.close()
+
+def create_cum_distr_all_diagnosis(simulation_model, m_range):
+    exit_patients = simulation_model.patient_exit_list
+
+    uterine_array = np.zeros(m_range)
+    cervical_array = np.zeros(m_range)
+    ovarian_array = np.zeros(m_range)
+
+    uterine_flag = True
+    cervical_flag = True
+    ovarian_flag = True
+
+    m_array_2 = np.arange(0,m_range)
+    for patient in exit_patients:
+        if patient.diagnosis == "uterine":
+            uterine_array[patient.number_of_days_in_system] += 1
+        if patient.diagnosis == "cervical":
+            cervical_array[patient.number_of_days_in_system] += 1
+        if patient.diagnosis == "ovarian":
+            ovarian_array[patient.number_of_days_in_system] += 1
+
+    cum_uterine = np.divide(np.cumsum(uterine_array), np.sum(uterine_array))
+    cum_cervical = np.divide(np.cumsum(cervical_array), np.sum(cervical_array))
+    cum_ovarian = np.divide(np.cumsum(ovarian_array), np.sum(ovarian_array))
+
+    plt.plot(m_array_2, cum_uterine, linestyle='-', label="Uterin cancer")
+    plt.plot(m_array_2, cum_cervical, linestyle='-', label="Cervical cancer")
+    plt.plot(m_array_2, cum_ovarian, linestyle='-', label="Ovarian cancer")
+    plt.xlabel('Days')
+    plt.ylabel('Cumulative amount')
+    plt.legend(loc='best')
+    plt.title('Cumulative distribution')
+    plt.grid(True)
+    plt.savefig("simulation/sim_figures/simulation_cumulative_all_diagnosis.png")
     plt.close()
 
 def create_capacity_graph(sim, day_horizon):
@@ -736,15 +780,15 @@ def main():
     art = mp.activity_recovery_time
 
     #Patient demand
-    uterin_demand = mp.uterin_demand
+    uterine_demand = mp.uterine_demand
     cervical_demand = mp.cervical_demand
     ovarian_demand = mp.ovarian_demand
 
     #Livmor
-    q3 = Queue(3, None, False, None, False, art[3])
-    q2 = Queue(2, q3, False, None, False, art[2])
-    q1 = Queue(1, q2, False, None, False, art[1])
-    q0 = Queue(0, q1, True, uterin_demand/7, False, art[0])
+    q3 = Queue(3, None, False, None, False, art[3], "uterine")
+    q2 = Queue(2, q3, False, None, False, art[2], "uterine")
+    q1 = Queue(1, q2, False, None, False, art[1], "uterine")
+    q0 = Queue(0, q1, True, uterine_demand/7, False, art[0], "uterine")
 
 
     """
@@ -765,61 +809,61 @@ def main():
     """
 
     #Livmorhals
-    q8 = Queue(8, None, False, None, False, art[7])
-    q7 = Queue(7, q8, False, None, False, art[3])
-    q6 = Queue(6, q7, False, None, False, art[4])
-    q5 = Queue(5, q6, False, None, False, art[6])
-    q4 = Queue(4, q5, True, cervical_demand/7, False, art[0])
+    q8 = Queue(8, None, False, None, False, art[7], "cervical")
+    q7 = Queue(7, q8, False, None, False, art[3], "cervical")
+    q6 = Queue(6, q7, False, None, False, art[4], "cervical")
+    q5 = Queue(5, q6, False, None, False, art[6], "cervical")
+    q4 = Queue(4, q5, True, cervical_demand/7, False, art[0], "cervical")
 
     #Eggstokk
-    q12 = Queue(12, None, False, None, False, art[5])
-    q11 = Queue(11, q12, False, None, False, art[6])
-    q10 = Queue(10, q11, False, None, False, art[2])
-    q9 = Queue(9, q10, True, ovarian_demand/7, False, art[0])
+    q12 = Queue(12, None, False, None, False, art[5], "ovarian")
+    q11 = Queue(11, q12, False, None, False, art[6], "ovarian")
+    q10 = Queue(10, q11, False, None, False, art[2], "ovarian")
+    q9 = Queue(9, q10, True, ovarian_demand/7, False, art[0], "ovarian")
 
 
     #Treatment path: Livmor 1
-    q15 = Queue(15, None, False, None, True, art[9])
-    q14 = Queue(14, q15, False, None, True, art[1])
-    q13 = Queue(13, q14, False, None, True, art[6])
+    q15 = Queue(15, None, False, None, True, art[9], "uterine")
+    q14 = Queue(14, q15, False, None, True, art[1], "uterine")
+    q13 = Queue(13, q14, False, None, True, art[6], "uterine")
 
     #Treatment path: Livmor 2
-    q19 = Queue(19, None, False, None, True, art[8])
-    q18 = Queue(18, q19, False, None, True, art[9])
-    q17 = Queue(17, q18, False, None, True, art[1])
-    q16 = Queue(16, q17, False, None, True, art[6])
+    q19 = Queue(19, None, False, None, True, art[8], "uterine")
+    q18 = Queue(18, q19, False, None, True, art[9], "uterine")
+    q17 = Queue(17, q18, False, None, True, art[1], "uterine")
+    q16 = Queue(16, q17, False, None, True, art[6], "uterine")
 
 
 
     #Treatment path: Livmorhals 1
-    q20 = Queue(20, None, False, None, True,art[9])
+    q20 = Queue(20, None, False, None, True,art[9], "cervical")
 
     #Treatment path: Livmorhals 2
-    q23 = Queue(23, None, False, None, True, art[10])
-    q22 = Queue(22, q23, False, None, True, art[5])
-    q21 = Queue(21, q22, False, None, True, art[9])
+    q23 = Queue(23, None, False, None, True, art[10], "cervical")
+    q22 = Queue(22, q23, False, None, True, art[5], "cervical")
+    q21 = Queue(21, q22, False, None, True, art[9], "cervical")
 
     #Treatment path: Livmorhals 3
-    q31 = Queue(31, None, False, None, True, art[4])
-    q30 = Queue(30, q31, False, None, True, art[8])
-    q29 = Queue(29, q30, False, None, True, art[13])
-    q28 = Queue(28, q29, False, None, True, art[10])
-    q27 = Queue(27, q28, False, None, True, art[14])
-    q26 = Queue(26, q27, False, None, True, art[10])
-    q25 = Queue(25, q26, False, None, True, art[8])
-    q24 = Queue(24, q25, False, None, True, art[3])
+    q31 = Queue(31, None, False, None, True, art[4], "cervical")
+    q30 = Queue(30, q31, False, None, True, art[8], "cervical")
+    q29 = Queue(29, q30, False, None, True, art[13], "cervical")
+    q28 = Queue(28, q29, False, None, True, art[10], "cervical")
+    q27 = Queue(27, q28, False, None, True, art[14], "cervical")
+    q26 = Queue(26, q27, False, None, True, art[10], "cervical")
+    q25 = Queue(25, q26, False, None, True, art[8], "cervical")
+    q24 = Queue(24, q25, False, None, True, art[3], "cervical")
 
     #Treatment path: Eggstokk 1
-    q36 = Queue(36, None, False, None, True, art[8])
-    q35 = Queue(35, q36, False, None, True, art[6])
-    q34 = Queue(34, q35, False, None, True, art[9])
-    q33 = Queue(33, q34, False, None, True, art[8])
-    q32 = Queue(32, q33, False, None, True, art[6])
+    q36 = Queue(36, None, False, None, True, art[8], "ovarian")
+    q35 = Queue(35, q36, False, None, True, art[6], "ovarian")
+    q34 = Queue(34, q35, False, None, True, art[9], "ovarian")
+    q33 = Queue(33, q34, False, None, True, art[8], "ovarian")
+    q32 = Queue(32, q33, False, None, True, art[6], "ovarian")
 
     #Treatment path: Eggstokk 2
-    q39 = Queue(39, None, False, None, True, art[8])
-    q38 = Queue(38, q39, False, None, True, art[6])
-    q37 = Queue(37, q38, False, None, True, art[9])
+    q39 = Queue(39, None, False, None, True, art[8], "ovarian")
+    q38 = Queue(38, q39, False, None, True, art[6], "ovarian")
+    q37 = Queue(37, q38, False, None, True, art[9], "ovarian")
 
     q3.potential_treatment_queues = [q13, q16]
     q3.probability_of_treatment_queues = [0.35, 0.15, 0.5]
@@ -837,10 +881,6 @@ def main():
 
     arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24,q25,q26,q27,q28,q29,q30,q31,q32,q33,q34,q35,q36,q37,q38,q39]
 
-
-    #scheduled_appointments = np.full((100,100), 1)
-    #scheduled_appointments = np.random.randint(2, size = (70, 10000))
-
     #Optimization param
     weeks = 1
     G = None
@@ -850,7 +890,7 @@ def main():
     shift = 5#6
 
     #Simulation param
-    simulation_horizon = 1000
+    simulation_horizon = 100
     percentage_increase_in_capacity = 0
     no_show_percentage = 0
 
@@ -881,6 +921,7 @@ def main():
             s.update_appointments(scheduled_appointments)
             create_graph_2(s)
             create_cum(s, M)
+            create_cum_distr_all_diagnosis(s, M)
             create_graph_3(s)
 
 
