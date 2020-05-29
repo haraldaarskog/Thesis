@@ -644,8 +644,19 @@ def create_graph_1(s):
     plt.close()
 
 def create_graph_2(s):
-    plt.plot(s.day_array, s.total_num_in_queue, linestyle='-')
 
+    var = 4
+
+    cumsum, moving_aves = [0], [0,0,0]
+    for i, x in enumerate(s.total_num_in_queue, 1):
+        cumsum.append(cumsum[i - 1] + x)
+        if i >= var:
+            moving_ave = (cumsum[i] - cumsum[i-var])/var
+            #can do stuff with moving_ave here
+            moving_aves.append(moving_ave)
+
+    plt.plot(s.day_array, s.total_num_in_queue, linestyle='-',label="Number of patients")
+    plt.plot(s.day_array, moving_aves, linestyle='--', label="Moving average")
     plt.xlabel('Days')
     plt.ylabel('Number of patients')
     plt.legend(loc='best')
