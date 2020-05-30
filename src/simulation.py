@@ -245,6 +245,7 @@ class Simulation:
                      self.serviced_patient_history[self.day] = 1
             if next_departure_queue.is_last_queue and dep_patient != -1 and next_departure_queue.is_treatment_queue:
                 self.total_patients_exited += 1
+                dep_patient.exit_day = self.day
                 self.patient_exit_list.append(dep_patient)
                 print("MINUS______________")
 
@@ -540,6 +541,7 @@ class Queue:
             next_treatment_queue.incoming_patients.append(patient)
         else:
             self.discharged_from_diagnosis += 1
+            patient.exit_day = self.day
             self.patients_out_of_system.append(patient)
 
 
@@ -568,6 +570,7 @@ class Patient:
     def __init__(self, day, name, diagnosis):
         self.day = day
         self.entering_day = day
+        self.exit_day = None
         self.name = name
         self.diagnosis = diagnosis
 
@@ -645,9 +648,9 @@ def create_graph_1(s):
 
 def create_graph_2(s):
 
-    var = 15
+    var = 14
 
-    cumsum, moving_aves = [0], [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    cumsum, moving_aves = [0], [0,0,0,0,0,0,0,0,0,0,0,0,0]
     for i, x in enumerate(s.total_num_in_queue, 1):
         cumsum.append(cumsum[i - 1] + x)
         if i >= var:
@@ -698,7 +701,7 @@ def create_graph_3(s):
                 ovarian_flag = False
             ovarian_dev += s.queue_development[queue.id]
 
-    plt.plot(s.day_array, uterine_dev, linestyle='-', label="Uterin cancer")
+    plt.plot(s.day_array, uterine_dev, linestyle='-', label="Uterine cancer")
     plt.plot(s.day_array, cervical_dev, linestyle='-', label="Cerivcal cancer")
     plt.plot(s.day_array, ovarian_dev, linestyle='-', label="Ovarian cancer")
     plt.xlabel('Days')
@@ -716,8 +719,9 @@ def create_cum(simulation_model, m_range):
     m_array = np.zeros(m_range)
     m_array_2 = np.arange(0,m_range)
     for patient in exit_patients:
-        m_value = patient.number_of_days_in_system
-        m_array[m_value] += 1
+        if patient.entering_day > 50:
+            m_value = patient.number_of_days_in_system
+            m_array[m_value] += 1
 
     sum_array = int(np.sum(m_array))
     cum = np.divide(np.cumsum(m_array), sum_array)
@@ -755,7 +759,7 @@ def create_cum_distr_all_diagnosis(simulation_model, m_range):
     cum_cervical = np.divide(np.cumsum(cervical_array), np.sum(cervical_array))
     cum_ovarian = np.divide(np.cumsum(ovarian_array), np.sum(ovarian_array))
 
-    plt.plot(m_array_2, cum_uterine, linestyle='-', label="Uterin cancer")
+    plt.plot(m_array_2, cum_uterine, linestyle='-', label="Uterine cancer")
     plt.plot(m_array_2, cum_cervical, linestyle='-', label="Cervical cancer")
     plt.plot(m_array_2, cum_ovarian, linestyle='-', label="Ovarian cancer")
     plt.xlabel('Days')
@@ -786,6 +790,31 @@ def create_capacity_graph(sim, day_horizon):
     plt.grid(True)
     plt.savefig("simulation/sim_figures/simulation_capacity.png")
     plt.close()
+
+
+def create_total_time_in_system(sim, m_range):
+    exit_patients = sim.patient_exit_list
+    sum = 0
+    m_range = m_range + 30
+    m_array = np.zeros(m_range)
+    m_array_2 = np.arange(0,m_range)
+    for patient in exit_patients:
+        if patient.entering_day > 50:
+            days_in_system = (patient.exit_day-patient.entering_day)
+            m_array[days_in_system] += 1
+
+    sum_array = int(np.sum(m_array))
+    cum = np.divide(np.cumsum(m_array), sum_array)
+
+    plt.plot(m_array_2, cum, linestyle='-')
+    plt.xlabel('Days')
+    plt.ylabel('Cumulative amount, total time in system')
+    plt.legend(loc='best')
+    plt.title('Cumulative distribution with '+str(sum_array)+' exits')
+    plt.grid(True)
+    plt.savefig("simulation/sim_figures/simulation_cumulative_overall_time.png")
+    plt.close()
+
 
 def main():
     np.random.seed(0)
@@ -936,6 +965,7 @@ def main():
             create_cum(s, M)
             create_graph_3(s)
             create_cum_distr_all_diagnosis(s, M)
+            create_total_time_in_system(s, M)
             if i > 6:
                 create_graph_2(s)
 

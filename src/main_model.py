@@ -290,7 +290,7 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
 
 #Running the model
 def run_model():
-    w = 2
+    w = 1
     optimize_model(weeks = w, N_input = 20, M_input = 20, shift = 6, with_rolling_horizon = False, in_iteration = False, weights = None, E = None, G = None)
 
 if __name__ == '__main__':
