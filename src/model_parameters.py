@@ -22,8 +22,8 @@ activity_dict={
 #Patient processes. Patient process on rows, activity on columns
 #1 if patient process conducts activity, 0 otherwise
 diagnostic_processes = np.array([
-        [0,1,2,3], #Livmor. 0/3
-        [0,6,4,3,7], #Livmorhals. Start: 4/8
+        [0,1,2,3],#, #Livmor. 0/3
+        [0,6,4,3,7],#, #Livmorhals. Start: 4/8
         [0,2,6,5]]) #Eggstokk. Start: 9/12
 
 treatment_processes = np.array([

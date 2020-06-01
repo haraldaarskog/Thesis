@@ -388,13 +388,21 @@ class Queue:
             return mean_service_time + service_uncertainty
 
     def generate_arrivals_from_poisson(self):
-        new_arrivals = np.random.poisson(self.expected_number_of_arrivals_per_day, 1)[0]
+        if self.is_weekend():
+                new_arrivals = 0
+        else:
+            new_arrivals = np.random.poisson(self.expected_number_of_arrivals_per_day, 1)[0]
         print(new_arrivals,"new arrivals in queue",self.id)
         for i in range(new_arrivals):
             self.handle_arrival_event(Patient(self.day, names.get_full_name(), self.diagnosis), 0)
         return new_arrivals
 
     #OTHER
+
+    def is_weekend(self):
+        if self.day % 7 == 5 or self.day % 7 == 6:
+            return True
+        return False
 
     def load_incoming_patients(self):
         for patient in self.incoming_patients:
@@ -671,6 +679,47 @@ def create_graph_2(s):
     plt.savefig('simulation/sim_figures/simulation_total_in_system.png')
     plt.close()
 
+def create_stacked_plot(s):
+    uterine_cancer = [0,1,2,3,13,14,15,16,17,18,19]
+    cerivcal_cancer = [4,5,6,7,8,20,21,22,23,24,25,26,27,28,29,30,31]
+    ovarian_cancer = [9,10,11,12,32,33,34,35,36,37,38,39]
+
+    uterine_flag = True
+    cervical_flag = True
+    ovarian_flag = True
+
+    for queue in s.all_queues:
+        if queue.id in uterine_cancer:
+            if uterine_flag:
+                uterine_dev = np.zeros(len(s.queue_development[queue.id]))
+                uterine_flag = False
+            uterine_dev += s.queue_development[queue.id]
+
+
+        if queue.id in cerivcal_cancer:
+            if cervical_flag:
+                cervical_dev = np.zeros(len(s.queue_development[queue.id]))
+                cervical_flag = False
+            cervical_dev += s.queue_development[queue.id]
+
+
+        if queue.id in ovarian_cancer:
+            if ovarian_flag:
+                ovarian_dev = np.zeros(len(s.queue_development[queue.id]))
+                ovarian_flag = False
+            ovarian_dev += s.queue_development[queue.id]
+
+
+    labels = ["Uterine", "Cervical", "Ovarian"]
+    plt.stackplot(s.day_array, uterine_dev, cervical_dev, ovarian_dev, labels = labels)
+    plt.xlabel('Days')
+    plt.ylabel('Number of patients')
+    plt.legend(loc='upper left)
+    plt.title('Stacked plot')
+    plt.grid(True)
+    plt.savefig("simulation/sim_figures/stacked_plot.png")
+    plt.close()
+
 def create_graph_3(s):
     uterine_cancer = [0,1,2,3,13,14,15,16,17,18,19]
     cerivcal_cancer = [4,5,6,7,8,20,21,22,23,24,25,26,27,28,29,30,31]
@@ -831,7 +880,7 @@ def main():
     q3 = Queue(3, None, False, None, False, art[3], "uterine")
     q2 = Queue(2, q3, False, None, False, art[2], "uterine")
     q1 = Queue(1, q2, False, None, False, art[1], "uterine")
-    q0 = Queue(0, q1, True, uterine_demand/7, False, art[0], "uterine")
+    q0 = Queue(0, q1, True, uterine_demand/5, False, art[0], "uterine")
 
 
     """
@@ -856,13 +905,13 @@ def main():
     q7 = Queue(7, q8, False, None, False, art[3], "cervical")
     q6 = Queue(6, q7, False, None, False, art[4], "cervical")
     q5 = Queue(5, q6, False, None, False, art[6], "cervical")
-    q4 = Queue(4, q5, True, cervical_demand/7, False, art[0], "cervical")
+    q4 = Queue(4, q5, True, cervical_demand/5, False, art[0], "cervical")
 
     #Eggstokk
     q12 = Queue(12, None, False, None, False, art[5], "ovarian")
     q11 = Queue(11, q12, False, None, False, art[6], "ovarian")
     q10 = Queue(10, q11, False, None, False, art[2], "ovarian")
-    q9 = Queue(9, q10, True, ovarian_demand/7, False, art[0], "ovarian")
+    q9 = Queue(9, q10, True, ovarian_demand/5, False, art[0], "ovarian")
 
 
     #Treatment path: Livmor 1
@@ -933,7 +982,7 @@ def main():
     shift = 5#6
 
     #Simulation param
-    simulation_horizon = 100
+    simulation_horizon = 1000
     percentage_increase_in_capacity = 0
     no_show_percentage = 0
 
@@ -963,9 +1012,10 @@ def main():
             scheduled_appointments = scheduled_appointments[:,:7]
             s.update_appointments(scheduled_appointments)
             create_cum(s, M)
-            create_graph_3(s)
             create_cum_distr_all_diagnosis(s, M)
             create_total_time_in_system(s, M)
+            create_graph_3(s)
+            create_stacked_plot(s)
             if i > 6:
                 create_graph_2(s)
 
