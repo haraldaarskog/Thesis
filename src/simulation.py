@@ -41,6 +41,41 @@ class Simulation:
         self.patient_exit_list = []
 
 
+    def calculate_resource_usage(self):
+        number_of_resources = mp.L_rt.shape[0]
+        res_dict = {}
+        for queue in self.all_queues:
+            res_use_queue = queue.resource_usage
+            for key in res_use_queue:
+                if key not in res_dict:
+                    res_dict[key] = np.zeros(number_of_resources)
+                res_dict[key] += res_use_queue[key]
+        return res_dict
+
+    def calculate_resource_usage_day(self, day):
+        number_of_resources = mp.L_rt.shape[0]
+        res_array = np.zeros(mp.L_rt.shape[0])
+        for queue in self.all_queues:
+            res_use_queue = queue.resource_usage
+            if day not in res_use_queue:
+                continue
+            else:
+                queue_resources = res_use_queue[day]
+                res_array += queue_resources
+        return res_array
+
+    def check_if_available_resources(self, queue):
+        resources = queue.resource_dict.keys()
+        resource_usage = self.calculate_resource_usage_day(self.day)
+        for r in resources:
+            res_cap = mp.L_rt[r, 0]
+            resource_usage_now = resource_usage[r]
+            if resource_usage_now + queue.activity_duration > res_cap:
+                return False
+        return True
+
+
+
     def calculate_waiting_times(self):
         number_of_exits = len(self.patient_exit_list)
         if number_of_exits == 0:
@@ -183,9 +218,11 @@ class Simulation:
         return_queue = None
         min_t = float('inf')
         for queue in self.all_queues:
-            if queue.get_next_departure_time() < min_t and queue.get_appointment_capacity() > 0 and queue.get_number_of_patients_in_queue() > 0:
-                min_t = queue.get_next_departure_time()
-                return_queue = queue
+            #DENNE KAN KOMMENTERES UT HVIS RESSURSPROBLEMER
+            if self.check_if_available_resources(queue):
+                if queue.get_next_departure_time() < min_t and queue.get_appointment_capacity() > 0 and queue.get_number_of_patients_in_queue() > 0:
+                    min_t = queue.get_next_departure_time()
+                    return_queue = queue
 
         return return_queue
 
@@ -212,6 +249,7 @@ class Simulation:
         else:
             next_arrival_time = float('inf')
 
+
         #Next departure
         next_departure_queue = self.find_next_departure()
 
@@ -229,8 +267,8 @@ class Simulation:
         self.time = t_event
 
         print("\nTIME IS ADVANCED (t = " + str(self.time) +")")
-        print("Arrival queue:",next_arrival_queue,"at t =", next_arrival_time)
-        print("Departure queue", next_departure_queue,"at t =", next_departure_time)
+        #print("Arrival queue:",next_arrival_queue,"at t =", next_arrival_time)
+        #print("Departure queue", next_departure_queue,"at t =", next_departure_time)
 
         if next_arrival_time <= next_departure_time:
             next_arrival_queue.handle_arrival_event(arrival_patient, self.time)
@@ -238,16 +276,18 @@ class Simulation:
 
         else:
             dep_patient = next_departure_queue.handle_depart_event(self.time)
-            if dep_patient != -1:
+            if dep_patient != -1 and dep_patient != -2:
                 if self.day in self.serviced_patient_history.keys():
                     self.serviced_patient_history[self.day] = self.serviced_patient_history[self.day] + 1
                 else:
                      self.serviced_patient_history[self.day] = 1
-            if next_departure_queue.is_last_queue and dep_patient != -1 and next_departure_queue.is_treatment_queue:
+            if next_departure_queue.is_last_queue and dep_patient != -1 and dep_patient != -2 and next_departure_queue.is_treatment_queue:
                 self.total_patients_exited += 1
                 dep_patient.exit_day = self.day
                 self.patient_exit_list.append(dep_patient)
-                print("MINUS______________")
+                print("A PATIENT LEFT THE SYSTEM")
+            if dep_patient == -2:
+                print("___________Not enough resources______________")
 
     def summarize_discharged_from_diagnosis(self):
         sum = 0
@@ -276,11 +316,12 @@ class Simulation:
 
 
 class Queue:
-    def __init__(self, id, next_Queue, is_incoming_queue, arrival_rate, is_treatment_queue, recovery_days, diagnosis):
+    def __init__(self, id, next_Queue, is_incoming_queue, arrival_rate, is_treatment_queue, recovery_days, diagnosis, activity):
         self.id = id
         self.day = 0
         self.is_treatment_queue = is_treatment_queue
         self.diagnosis = diagnosis
+        self.activity = activity
 
         self.patient_list = []
         self.no_show_list = []
@@ -306,8 +347,6 @@ class Queue:
 
         self.allowed_time = 24
 
-        self.queue_graph = []
-
         self.potential_treatment_queues = []
         self.probability_of_treatment_queues = []
 
@@ -315,8 +354,25 @@ class Queue:
 
         self.patients_out_of_system = []
 
+        #Resources
+        self.resource_usage = {}
+        self.resource_dict = mp.activity_resource_dict[self.activity]
+        self.activity_duration = mp.activity_duration[self.activity]
+
+
     def __str__(self):
      return "Queue ("+str(self.id)+"): " + str(self.get_number_of_patients_in_queue())
+
+    #Resource methods
+    def activate_resources(self, service_time):
+        if self.day not in self.resource_usage.keys():
+            number_of_resources = mp.L_rt.shape[0]
+            self.resource_usage[self.day] = np.zeros(number_of_resources)
+        for key in self.resource_dict:
+            hours_demanded = self.resource_dict[key]
+            self.resource_usage[self.day][key] += service_time * hours_demanded
+
+
 
     #SETTERS
     def set_next_departure_time(self, time):
@@ -377,15 +433,10 @@ class Queue:
 
     #GENERATORS
     def generate_service_time(self):
-        mean_service_time = 1
-
-        mean = 0
-        std_deviation = 0.25
-        service_uncertainty = np.random.normal(mean, std_deviation, 1)[0]
-        if service_uncertainty + mean_service_time < 0:
-            return mean_service_time
-        else:
-            return mean_service_time + service_uncertainty
+        mean_service_time = self.activity_duration
+        prob_arr = [0.6*mean_service_time,0.8*mean_service_time,1*mean_service_time,1.2*mean_service_time,1.4*mean_service_time]
+        index = np.random.choice(np.arange(0, len(prob_arr)), p=[0.1, 0.2, 0.4, 0.2, 0.1])
+        return prob_arr[index]
 
     def generate_arrivals_from_poisson(self):
         if self.is_weekend():
@@ -429,7 +480,6 @@ class Queue:
         self.patient_list.append(patient)
         patient.is_added_to_a_queue(time, self.day, self.id)
         self.num_arrivals += 1
-        self.queue_graph.append([self.day + time/24, self.get_number_of_patients_in_queue()])
 
     def get_patient_with_highest_m(self):
         if len(self.patient_list) == 0:
@@ -504,11 +554,12 @@ class Queue:
             return -1
         self.remove_patient(departure_patient)
         departure_patient.is_removed_from_queue(self.id)
-        self.queue_graph.append([self.day + time/24, self.get_number_of_patients_in_queue()])
         self.num_departs += 1
 
         print("EVENT: Dep: q("+str(self.id)+"), remaining: "+ str(self.get_number_of_patients_in_queue()) + ", t =", time)
-        service_time_for_departure_patient = time + self.generate_service_time()
+        actual_service_time = self.generate_service_time()
+        service_time_for_departure_patient = time + actual_service_time
+        self.activate_resources(actual_service_time)
 
         if self.get_number_of_patients_in_queue() > 0 and self.get_appointment_capacity() > 0:
             #Hvis det er mer tid tilgjengelig, gjennomfør neste time samme dag
@@ -533,7 +584,7 @@ class Queue:
         index = np.random.choice(np.arange(0, len(self.potential_treatment_queues)+1), p=self.probability_of_treatment_queues)
         #Out of the system
         if index == len(self.potential_treatment_queues):
-            print("OUT!!!!!!!!")
+            print("A PATIENT IS DISCHARGED FROM DIAGNOSIS")
             return False
         return self.potential_treatment_queues[index]
 
@@ -640,21 +691,7 @@ class Patient:
         self.arrival_time_in_current_queue = time
 
 
-
-def create_graph_1(s):
-    for key in s.queue_development:
-        dev = s.queue_development[key]
-        plt.plot(s.day_array, dev, linestyle='-', label="Queue " + str(key))
-
-    plt.xlabel('Days')
-    plt.ylabel('Number of patients in queue')
-    plt.legend(loc='best')
-    plt.title('Simulation')
-    plt.grid(True)
-    plt.savefig('simulation/sim_figures/simulation_every_queue.png')
-    plt.close()
-
-def create_graph_2(s):
+def create_total_queue_development(s):
 
     var = 14
 
@@ -665,10 +702,6 @@ def create_graph_2(s):
             moving_ave = (cumsum[i] - cumsum[i - var])/var
             #can do stuff with moving_ave here
             moving_aves.append(moving_ave)
-    print(s.day_array)
-    print(moving_aves)
-    print(s.total_num_in_queue)
-
     plt.plot(s.day_array, s.total_num_in_queue, linestyle='-',label="Number of patients")
     plt.plot(s.day_array, moving_aves, linestyle='--', label="Moving average")
     plt.xlabel('Days')
@@ -680,30 +713,30 @@ def create_graph_2(s):
     plt.close()
 
 def create_stacked_plot(s):
-    uterine_cancer = [0,1,2,3,13,14,15,16,17,18,19]
-    cerivcal_cancer = [4,5,6,7,8,20,21,22,23,24,25,26,27,28,29,30,31]
-    ovarian_cancer = [9,10,11,12,32,33,34,35,36,37,38,39]
+    #uterine_cancer = [0,1,2,3,13,14,15,16,17,18,19]
+    #cerivcal_cancer = [4,5,6,7,8,20,21,22,23,24,25,26,27,28,29,30,31]
+    #ovarian_cancer = [9,10,11,12,32,33,34,35,36,37,38,39]
 
     uterine_flag = True
     cervical_flag = True
     ovarian_flag = True
 
     for queue in s.all_queues:
-        if queue.id in uterine_cancer:
+        if queue.diagnosis == "uterine":
             if uterine_flag:
                 uterine_dev = np.zeros(len(s.queue_development[queue.id]))
                 uterine_flag = False
             uterine_dev += s.queue_development[queue.id]
 
 
-        if queue.id in cerivcal_cancer:
+        if queue.diagnosis == "cervical":
             if cervical_flag:
                 cervical_dev = np.zeros(len(s.queue_development[queue.id]))
                 cervical_flag = False
             cervical_dev += s.queue_development[queue.id]
 
 
-        if queue.id in ovarian_cancer:
+        if queue.diagnosis == "ovarian":
             if ovarian_flag:
                 ovarian_dev = np.zeros(len(s.queue_development[queue.id]))
                 ovarian_flag = False
@@ -714,45 +747,48 @@ def create_stacked_plot(s):
     plt.stackplot(s.day_array, uterine_dev, cervical_dev, ovarian_dev, labels = labels)
     plt.xlabel('Days')
     plt.ylabel('Number of patients')
-    plt.legend(loc='upper left)
+    plt.legend(loc='upper left')
     plt.title('Stacked plot')
     plt.grid(True)
     plt.savefig("simulation/sim_figures/stacked_plot.png")
     plt.close()
 
-def create_graph_3(s):
-    uterine_cancer = [0,1,2,3,13,14,15,16,17,18,19]
-    cerivcal_cancer = [4,5,6,7,8,20,21,22,23,24,25,26,27,28,29,30,31]
-    ovarian_cancer = [9,10,11,12,32,33,34,35,36,37,38,39]
+def create_queue_development_all_pathways(s):
+    #uterine_cancer = [0,1,2,3,13,14,15,16,17,18,19]
+    #cerivcal_cancer = [4,5,6,7,8,20,21,22,23,24,25,26,27,28,29,30,31]
+    #ovarian_cancer = [9,10,11,12,32,33,34,35,36,37,38,39]
 
     uterine_flag = True
     cervical_flag = True
     ovarian_flag = True
 
     for queue in s.all_queues:
-        if queue.id in uterine_cancer:
+        if queue.diagnosis == "uterine":
             if uterine_flag:
                 uterine_dev = np.zeros(len(s.queue_development[queue.id]))
                 uterine_flag = False
             uterine_dev += s.queue_development[queue.id]
 
 
-        if queue.id in cerivcal_cancer:
+        if queue.diagnosis == "cervical":
             if cervical_flag:
                 cervical_dev = np.zeros(len(s.queue_development[queue.id]))
                 cervical_flag = False
             cervical_dev += s.queue_development[queue.id]
 
 
-        if queue.id in ovarian_cancer:
+        if queue.diagnosis == "ovarian":
             if ovarian_flag:
                 ovarian_dev = np.zeros(len(s.queue_development[queue.id]))
                 ovarian_flag = False
             ovarian_dev += s.queue_development[queue.id]
 
-    plt.plot(s.day_array, uterine_dev, linestyle='-', label="Uterine cancer")
-    plt.plot(s.day_array, cervical_dev, linestyle='-', label="Cerivcal cancer")
-    plt.plot(s.day_array, ovarian_dev, linestyle='-', label="Ovarian cancer")
+    if not uterine_flag:
+        plt.plot(s.day_array, uterine_dev, linestyle='-', label="Uterine cancer")
+    if not cervical_flag:
+        plt.plot(s.day_array, cervical_dev, linestyle='-', label="Cerivcal cancer")
+    if not ovarian_flag:
+        plt.plot(s.day_array, ovarian_dev, linestyle='-', label="Ovarian cancer")
     plt.xlabel('Days')
     plt.ylabel('Number of patients')
     plt.legend(loc='best')
@@ -763,7 +799,7 @@ def create_graph_3(s):
 
 
 
-def create_cum(simulation_model, m_range):
+def create_cumulative_waiting_times(simulation_model, m_range):
     exit_patients = simulation_model.patient_exit_list
     m_array = np.zeros(m_range)
     m_array_2 = np.arange(0,m_range)
@@ -779,7 +815,7 @@ def create_cum(simulation_model, m_range):
     plt.xlabel('Days')
     plt.ylabel('Cumulative amount')
     plt.legend(loc='best')
-    plt.title('Cumulative distribution with '+str(sum_array)+' exits')
+    plt.title('Cumulative distribution of waiting times')
     plt.grid(True)
     plt.savefig("simulation/sim_figures/simulation_cumulative.png")
     plt.close()
@@ -814,7 +850,7 @@ def create_cum_distr_all_diagnosis(simulation_model, m_range):
     plt.xlabel('Days')
     plt.ylabel('Cumulative amount')
     plt.legend(loc='best')
-    plt.title('Cumulative distribution')
+    plt.title('Cumulative distribution of waiting times')
     plt.grid(True)
     plt.savefig("simulation/sim_figures/simulation_cumulative_all_diagnosis.png")
     plt.close()
@@ -857,12 +893,33 @@ def create_total_time_in_system(sim, m_range):
 
     plt.plot(m_array_2, cum, linestyle='-')
     plt.xlabel('Days')
-    plt.ylabel('Cumulative amount, total time in system')
+    plt.ylabel('Cumulative amount')
     plt.legend(loc='best')
-    plt.title('Cumulative distribution with '+str(sum_array)+' exits')
+    plt.title('Cumulative amount, total time in system')
     plt.grid(True)
     plt.savefig("simulation/sim_figures/simulation_cumulative_overall_time.png")
     plt.close()
+
+
+def resource_usage_plot(s, active_days, sim_horizon):
+    res_dict = s.calculate_resource_usage()
+    arr = np.zeros((mp.L_rt.shape[0], sim_horizon))
+    days = np.arange(0,active_days)
+    for day in res_dict:
+        res_usage = res_dict[day]
+        for i in range(len(res_usage)):
+            arr[i, day] = res_usage[i]
+
+    for r in range(arr.shape[0]):
+        plt.plot(days, arr[r,:active_days], linestyle='-', label = str(r))
+    plt.xlabel('Days')
+    plt.ylabel('Hours')
+    plt.legend(loc='best')
+    plt.title('Resource usage')
+    plt.grid(True)
+    plt.savefig("simulation/sim_figures/resource_usage.png")
+    plt.close()
+
 
 
 def main():
@@ -877,85 +934,82 @@ def main():
     ovarian_demand = mp.ovarian_demand
 
     #Livmor
-    q3 = Queue(3, None, False, None, False, art[3], "uterine")
-    q2 = Queue(2, q3, False, None, False, art[2], "uterine")
-    q1 = Queue(1, q2, False, None, False, art[1], "uterine")
-    q0 = Queue(0, q1, True, uterine_demand/5, False, art[0], "uterine")
+    q3 = Queue(3, None, False, None, False, art[3], "uterine", 3)
+    q2 = Queue(2, q3, False, None, False, art[2], "uterine", 2)
+    q1 = Queue(1, q2, False, None, False, art[1], "uterine", 1)
+    q0 = Queue(0, q1, True, uterine_demand/5, False, art[0], "uterine", 0)
 
 
-    """
+
     #Livmor_treat 1
-    q6 = Queue(6, None, False, None, True, 4)
-    q5 = Queue(5, q6, False, None, True, 0)
-    q4 = Queue(4, q5, False, None, True, 0)
+    q6 = Queue(6, None, False, None, True, art[9], "uterine", 9)
+    q5 = Queue(5, q6, False, None, True, art[1], "uterine", 1)
+    q4 = Queue(4, q5, False, None, True, art[6], "uterine", 6)
 
     #Livmor_treat 2
-    q13 = Queue(13, None, False, None, True, 7)
-    q12 = Queue(12, q13, False, None, True, 7)
-    q11 = Queue(11, q12, False, None, True, 7)
-    q10 = Queue(10, q11, False, None, True, 7)
-    q9 = Queue(9, q10, False, None, True, 4)
-    q8 = Queue(8, q9, False, None, True, 0)
-    q7 = Queue(7, q8, False, None, True, 0)
+    q10 = Queue(10, None, False, None, True, art[8], "uterine", 8)
+    q9 = Queue(9, q10, False, None, True, art[9], "uterine", 9)
+    q8 = Queue(8, q9, False, None, True, art[1], "uterine", 1)
+    q7 = Queue(7, q8, False, None, True, art[6], "uterine", 6)
 
     """
 
     #Livmorhals
-    q8 = Queue(8, None, False, None, False, art[7], "cervical")
-    q7 = Queue(7, q8, False, None, False, art[3], "cervical")
-    q6 = Queue(6, q7, False, None, False, art[4], "cervical")
-    q5 = Queue(5, q6, False, None, False, art[6], "cervical")
-    q4 = Queue(4, q5, True, cervical_demand/5, False, art[0], "cervical")
+    q8 = Queue(8, None, False, None, False, art[7], "cervical", 7)
+    q7 = Queue(7, q8, False, None, False, art[3], "cervical", 3)
+    q6 = Queue(6, q7, False, None, False, art[4], "cervical", 4)
+    q5 = Queue(5, q6, False, None, False, art[6], "cervical", 6)
+    q4 = Queue(4, q5, True, cervical_demand/5, False, art[0], "cervical", 0)
 
     #Eggstokk
-    q12 = Queue(12, None, False, None, False, art[5], "ovarian")
-    q11 = Queue(11, q12, False, None, False, art[6], "ovarian")
-    q10 = Queue(10, q11, False, None, False, art[2], "ovarian")
-    q9 = Queue(9, q10, True, ovarian_demand/5, False, art[0], "ovarian")
+    q12 = Queue(12, None, False, None, False, art[5], "ovarian", 5)
+    q11 = Queue(11, q12, False, None, False, art[6], "ovarian", 6)
+    q10 = Queue(10, q11, False, None, False, art[2], "ovarian", 2)
+    q9 = Queue(9, q10, True, ovarian_demand/5, False, art[0], "ovarian", 0)
 
 
     #Treatment path: Livmor 1
-    q15 = Queue(15, None, False, None, True, art[9], "uterine")
-    q14 = Queue(14, q15, False, None, True, art[1], "uterine")
-    q13 = Queue(13, q14, False, None, True, art[6], "uterine")
+    q15 = Queue(15, None, False, None, True, art[9], "uterine", 9)
+    q14 = Queue(14, q15, False, None, True, art[1], "uterine", 1)
+    q13 = Queue(13, q14, False, None, True, art[6], "uterine", 6)
 
     #Treatment path: Livmor 2
-    q19 = Queue(19, None, False, None, True, art[8], "uterine")
-    q18 = Queue(18, q19, False, None, True, art[9], "uterine")
-    q17 = Queue(17, q18, False, None, True, art[1], "uterine")
-    q16 = Queue(16, q17, False, None, True, art[6], "uterine")
+    q19 = Queue(19, None, False, None, True, art[8], "uterine", 8)
+    q18 = Queue(18, q19, False, None, True, art[9], "uterine", 9)
+    q17 = Queue(17, q18, False, None, True, art[1], "uterine", 1)
+    q16 = Queue(16, q17, False, None, True, art[6], "uterine", 6)
 
 
 
     #Treatment path: Livmorhals 1
-    q20 = Queue(20, None, False, None, True,art[9], "cervical")
+    q20 = Queue(20, None, False, None, True,art[9], "cervical", 9)
 
     #Treatment path: Livmorhals 2
-    q23 = Queue(23, None, False, None, True, art[10], "cervical")
-    q22 = Queue(22, q23, False, None, True, art[5], "cervical")
-    q21 = Queue(21, q22, False, None, True, art[9], "cervical")
+    q23 = Queue(23, None, False, None, True, art[10], "cervical", 10)
+    q22 = Queue(22, q23, False, None, True, art[5], "cervical", 5)
+    q21 = Queue(21, q22, False, None, True, art[9], "cervical", 9)
 
     #Treatment path: Livmorhals 3
-    q31 = Queue(31, None, False, None, True, art[4], "cervical")
-    q30 = Queue(30, q31, False, None, True, art[8], "cervical")
-    q29 = Queue(29, q30, False, None, True, art[13], "cervical")
-    q28 = Queue(28, q29, False, None, True, art[10], "cervical")
-    q27 = Queue(27, q28, False, None, True, art[14], "cervical")
-    q26 = Queue(26, q27, False, None, True, art[10], "cervical")
-    q25 = Queue(25, q26, False, None, True, art[8], "cervical")
-    q24 = Queue(24, q25, False, None, True, art[3], "cervical")
+    q31 = Queue(31, None, False, None, True, art[4], "cervical", 4)
+    q30 = Queue(30, q31, False, None, True, art[8], "cervical", 8)
+    q29 = Queue(29, q30, False, None, True, art[13], "cervical", 13)
+    q28 = Queue(28, q29, False, None, True, art[10], "cervical", 10)
+    q27 = Queue(27, q28, False, None, True, art[14], "cervical", 14)
+    q26 = Queue(26, q27, False, None, True, art[10], "cervical", 10)
+    q25 = Queue(25, q26, False, None, True, art[8], "cervical", 8)
+    q24 = Queue(24, q25, False, None, True, art[3], "cervical", 3)
 
     #Treatment path: Eggstokk 1
-    q36 = Queue(36, None, False, None, True, art[8], "ovarian")
-    q35 = Queue(35, q36, False, None, True, art[6], "ovarian")
-    q34 = Queue(34, q35, False, None, True, art[9], "ovarian")
-    q33 = Queue(33, q34, False, None, True, art[8], "ovarian")
-    q32 = Queue(32, q33, False, None, True, art[6], "ovarian")
+    q36 = Queue(36, None, False, None, True, art[8], "ovarian", 8)
+    q35 = Queue(35, q36, False, None, True, art[6], "ovarian", 6)
+    q34 = Queue(34, q35, False, None, True, art[9], "ovarian", 9)
+    q33 = Queue(33, q34, False, None, True, art[8], "ovarian", 8)
+    q32 = Queue(32, q33, False, None, True, art[6], "ovarian", 6)
 
     #Treatment path: Eggstokk 2
-    q39 = Queue(39, None, False, None, True, art[8], "ovarian")
-    q38 = Queue(38, q39, False, None, True, art[6], "ovarian")
-    q37 = Queue(37, q38, False, None, True, art[9], "ovarian")
+    q39 = Queue(39, None, False, None, True, art[8], "ovarian", 8)
+    q38 = Queue(38, q39, False, None, True, art[6], "ovarian", 6)
+    q37 = Queue(37, q38, False, None, True, art[9], "ovarian", 9)
 
     q3.potential_treatment_queues = [q13, q16]
     q3.probability_of_treatment_queues = [0.35, 0.15, 0.5]
@@ -969,17 +1023,17 @@ def main():
     """
     q3.potential_treatment_queues = [q4, q7]
     q3.probability_of_treatment_queues = [0.5,0.5,0]
-    """
 
-    arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24,q25,q26,q27,q28,q29,q30,q31,q32,q33,q34,q35,q36,q37,q38,q39]
+
+    arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10]#,q11,q12,q13,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24,q25,q26,q27,q28,q29,q30,q31,q32,q33,q34,q35,q36,q37,q38,q39]
 
     #Optimization param
-    weeks = 1
+    weeks = 2
     G = None
     E = None
     M = 40
     N = int(np.round(M*3/5))
-    shift = 5#6
+    shift = 6
 
     #Simulation param
     simulation_horizon = 1000
@@ -999,25 +1053,27 @@ def main():
 
     for i in range(simulation_horizon):
         s.next_day()
+
         if i % 7 == 6 and i > 0:
 
             E = s.create_E_matrix()
             G = s.create_G_matrix()
-            print("E:",E)
-            print("G:",G)
 
             create_capacity_graph(s, i + 1)
             _, b_variable, _ = mm.optimize_model(weeks = weeks, N_input = N, M_input = M, shift = shift, with_rolling_horizon = True, in_iteration = False, weights = None, G = G, E = E)
             scheduled_appointments = mf.from_dict_to_matrix_2(b_variable,(number_of_queues, weeks*7))
             scheduled_appointments = scheduled_appointments[:,:7]
             s.update_appointments(scheduled_appointments)
-            create_cum(s, M)
+
+
+            resource_usage_plot(s,i + 1,simulation_horizon)
+            create_cumulative_waiting_times(s, M)
             create_cum_distr_all_diagnosis(s, M)
             create_total_time_in_system(s, M)
-            create_graph_3(s)
-            create_stacked_plot(s)
+            create_queue_development_all_pathways(s)
+            #create_stacked_plot(s)
             if i > 6:
-                create_graph_2(s)
+                create_total_queue_development(s)
 
 
 

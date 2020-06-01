@@ -55,4 +55,21 @@ elif j >= total_queues - total_treatment_queues:
                 model.addConstr(q_variable[j, t, 0, m] == gp.quicksum(G_jtnm[j, t, n, m] for n in range(N)) + gp.quicksum(c_variable[i, t - M_j[i], n, m] * Q_ij[i, j] for i in range(total_treatment_queues, total_queues) for n in range(N) if (t - M_j[i]) >= 0))
 else:
     continue
+
+
+
+
+
+def create_graph_1(s):
+    for key in s.queue_development:
+        dev = s.queue_development[key]
+        plt.plot(s.day_array, dev, linestyle='-', label="Queue " + str(key))
+
+    plt.xlabel('Days')
+    plt.ylabel('Number of patients in queue')
+    plt.legend(loc='best')
+    plt.title('Simulation')
+    plt.grid(True)
+    plt.savefig('simulation/sim_figures/simulation_every_queue.png')
+    plt.close()
 """

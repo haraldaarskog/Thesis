@@ -22,18 +22,18 @@ activity_dict={
 #Patient processes. Patient process on rows, activity on columns
 #1 if patient process conducts activity, 0 otherwise
 diagnostic_processes = np.array([
-        [0,1,2,3],#, #Livmor. 0/3
-        [0,6,4,3,7],#, #Livmorhals. Start: 4/8
-        [0,2,6,5]]) #Eggstokk. Start: 9/12
+        [0,1,2,3]]) #Livmor. 0/3
+        #[0,6,4,3,7],#, #Livmorhals. Start: 4/8
+        #[0,2,6,5]]) #Eggstokk. Start: 9/12
 
 treatment_processes = np.array([
         [6,1,9], #13/17: Livmor, høyrisiko
-        [6,1,9,8], #18/23: Livmor: tilleggsbehandling, 6 kurer cellegift
-        [9], #24/26:Livmorhals
-        [9,5,10], #27/31: Livmorhals
-        [3,8,10,14,10,13,8,4], #32/39: Livmorhals
-        [6,8,9,6,8], #40/46: Eggstokk
-        [9,6,8]]) #47/51: Eggstokk
+        [6,1,9,8]]) #18/23: Livmor: tilleggsbehandling, 6 kurer cellegift
+        #[9], #24/26:Livmorhals
+        #[9,5,10], #27/31: Livmorhals
+        #[3,8,10,14,10,13,8,4], #32/39: Livmorhals
+        #[6,8,9,6,8], #40/46: Eggstokk
+        #[9,6,8]]) #47/51: Eggstokk
 
 
 #patient processes on rows, treatment paths on columns. Det entries denotes the
@@ -61,6 +61,24 @@ activity_recovery_time = {
 12: 1,
 13: 2,
 14: 0
+}
+
+activity_duration = {
+0: 0,
+1: 1,
+2: 1,
+3: 0.5,
+4: 0.5,
+5: 1,
+6: 0.75,
+7: 1,
+8: 4,
+9: 2,
+10: 1,
+11: 1,
+12: 1,
+13: 1,
+14: 1
 }
 
 
@@ -123,25 +141,25 @@ t,m,m,m,m])
 
 
 #Resource capacity for resource r at day t in a week
-L_rt = np.concatenate((np.full((100,5),100), np.full((100,2),0)), axis=1)
+L_rt = np.concatenate((np.full((16,5),1000), np.full((16,2),0)), axis=1)
 """
 L_rt = np.array([
-        [100,100,100,100,100,0,0],
-        [100,100,100,100,100,0,0],
-        [100,100,100,100,100,0,0],
-        [100,100,100,100,100,0,0],
-        [100,100,100,100,100,0,0],
-        [100,100,100,100,100,0,0],
-        [100,100,100,100,100,0,0],
-        [100,100,100,100,100,0,0],
-        [100,100,100,100,100,0,0],
-        [100,100,100,100,100,0,0],
-        [100,100,100,100,100,0,0],
-        [100,100,100,100,100,0,0],
-        [100,100,100,100,100,0,0],
-        [100,100,100,100,100,0,0],
-        [100,100,100,100,100,0,0],
-        [100,100,100,100,100,0,0]])
+        [160,160,160,160,160,0,0],#Physician
+        [100,100,100,100,100,0,0],#Gynecologist
+        [200,200,200,200,200,0,0],#Radiologist
+        [100,100,100,100,100,0,0],#Radiographer
+        [100,100,100,100,100,0,0],#Pathologist
+        [100,100,100,100,100,0,0],#Surgeon
+        [100,100,100,100,100,0,0],#Nurse
+        [200,200,200,200,200,0,0],#CT scanner
+        [200,200,200,200,200,0,0], #MRI scanner
+        [100,100,100,100,100,0,0],#Operating room
+        [100,100,100,100,100,0,0], #laboratory(biopsy)
+        [100,100,100,100,100,0,0], #outpatient clinic
+        [1000,1000,1000,1000,1000,0,0], #Bed
+        [100,100,100,100,100,0,0], # Day unit
+        [100,100,100,100,100,0,0], # Radiotherapy laboratory
+        [100,100,100,100,100,0,0]]) # Meeting room
 """
 resource_dict={
 ###Staff
