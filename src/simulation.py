@@ -544,8 +544,8 @@ class Queue:
             print("Queue",self.id,"is empty")
             sys.exit()
 
-        #departure_patient = self.get_patient_with_highest_m()
-        departure_patient = self.get_FIFO_patient()
+        departure_patient = self.get_patient_with_highest_m()
+        #departure_patient = self.get_FIFO_patient()
         self.decrease_appointment_capacity()
         if self.no_show_is_happening():
             print("We have a no show!")
@@ -1028,7 +1028,7 @@ def main():
     arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10]#,q11,q12,q13,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24,q25,q26,q27,q28,q29,q30,q31,q32,q33,q34,q35,q36,q37,q38,q39]
 
     #Optimization param
-    weeks = 2
+    weeks = 4
     G = None
     E = None
     M = 40
@@ -1036,7 +1036,7 @@ def main():
     shift = 6
 
     #Simulation param
-    simulation_horizon = 1000
+    simulation_horizon = 365
     percentage_increase_in_capacity = 0
     no_show_percentage = 0
 
@@ -1083,7 +1083,6 @@ def main():
 
 
     print("\nSimulation time:", time.time() - start_time)
-    create_graph_1(s)
 
 
     print("Generated:",s.total_patients_generated)
