@@ -41,8 +41,8 @@ treatment_processes = np.array([
 #Does not have to equal 1? Or last treatment is
 probability_of_path = np.array([
         [0.35,0.15,0,0,0,0,0],
-        [0,0,7/24,1/24,2/3,0,0],
-        [0,0,0,0,0,0.30,0.70]])
+        [0,0,0.27,0.03,0.6,0,0],
+        [0,0,0,0,0,0.25,0.65]])
 
 #recovery time after activity
 activity_recovery_time = {
