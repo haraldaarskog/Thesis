@@ -66,7 +66,7 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
     L_rt = mp.L_rt
     Time_limits_j = mp.Time_limits_j
 
-    K_t = mf.create_K_parameter(start_value = 1 * total_queues, increase_per_week = 0.5, time_periods = Time_periods)
+    K_t = mf.create_K_parameter(start_value = 100, increase_per_week = 0.5, time_periods = Time_periods)
     Q_ij = mf.create_Q_ij()
     queue_to_path = mf.create_queue_to_path(total_queues)
     probability_of_path = mp.probability_of_path
@@ -291,8 +291,8 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
 
 #Running the model
 def run_model():
-    w = 3
-    optimize_model(weeks = w, N_input = 20, M_input = 20, shift = 6, with_rolling_horizon = True, in_iteration = False, weights = None, E = None, G = None)
+    w = 2
+    optimize_model(weeks = w, N_input = 20, M_input = 20, shift = 6, with_rolling_horizon = False, in_iteration = False, weights = None, E = None, G = None)
 
 if __name__ == '__main__':
     run_model()

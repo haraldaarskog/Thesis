@@ -12,9 +12,8 @@ def transform_dict(d):
         if queue not in queue_set:
             queue_set.add(queue)
             some_d[queue]=[]
-        else:
-            if value>0:
-                some_d[queue].append(key[1])
+        if value>0:
+            some_d[queue].append(key[1])
     arr1=[]
     for k in some_d:
         arr2=[]
@@ -23,6 +22,7 @@ def transform_dict(d):
             arr2.append(t)
         arr1.append(arr2)
     return arr1
+
 
 def create_gantt_chart(Queues, Time_periods, variable_dict):
     # Declaring a figure "gnt"
@@ -54,23 +54,33 @@ def create_gantt_chart(Queues, Time_periods, variable_dict):
     # Setting graph attribute
     ax.grid(True)
     ax.grid(color = 'g', linestyle = '-')
+
+
+
     #font = font_manager.FontProperties(size='small')
     #ax.legend(loc=1,prop=font)
     #ax.invert_yaxis()
     arr=[]
     queue_set={}
     queue_dict={}
-    number=8
+    number = 8
     arrays=transform_dict(variable_dict)
+
+    queue = 0
     for array in arrays:
-        #ax.text(0.5, c, 'matplotlib', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
+        for a in array:
+            time1 = a[0]
+            b_value = variable_dict[queue, time1]
+            ax.text(time1 + 0.4, number + 5, str(b_value))
         color = list(np.random.rand(3))
         ax.broken_barh(array, (number, 4), facecolor=color)
         number+=10
+        queue += 1
 
 
 
     plt.savefig("figures/gantt_chart.png")
+    plt.close()
 
 #b_jt=mf.loadSolution("output/model_solution.sol")["b"]
 #create_gantt_chart(3, 14, b_jt)
