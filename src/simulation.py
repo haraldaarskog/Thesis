@@ -792,7 +792,7 @@ def create_queue_development_all_pathways(s):
     plt.xlabel('Days')
     plt.ylabel('Number of patients')
     plt.legend(loc='best')
-    plt.title('Number of patients in the different pathways')
+    plt.title('Number of patients in the different care pathways')
     plt.grid(True)
     plt.savefig("simulation/sim_figures/all_pathways.png")
     plt.close()
@@ -833,12 +833,13 @@ def create_cum_distr_all_diagnosis(simulation_model, m_range):
 
     m_array_2 = np.arange(0,m_range)
     for patient in exit_patients:
-        if patient.diagnosis == "uterine":
-            uterine_array[patient.number_of_days_in_system] += 1
-        if patient.diagnosis == "cervical":
-            cervical_array[patient.number_of_days_in_system] += 1
-        if patient.diagnosis == "ovarian":
-            ovarian_array[patient.number_of_days_in_system] += 1
+        if patient.entering_day > 50:
+            if patient.diagnosis == "uterine":
+                uterine_array[patient.number_of_days_in_system] += 1
+            if patient.diagnosis == "cervical":
+                cervical_array[patient.number_of_days_in_system] += 1
+            if patient.diagnosis == "ovarian":
+                ovarian_array[patient.number_of_days_in_system] += 1
 
     cum_uterine = np.divide(np.cumsum(uterine_array), np.sum(uterine_array))
     cum_cervical = np.divide(np.cumsum(cervical_array), np.sum(cervical_array))
@@ -1028,7 +1029,7 @@ def main():
     arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10]#,q11,q12,q13,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24,q25,q26,q27,q28,q29,q30,q31,q32,q33,q34,q35,q36,q37,q38,q39]
 
     #Optimization param
-    weeks = 4
+    weeks = 2
     G = None
     E = None
     M = 40
@@ -1040,9 +1041,9 @@ def main():
     percentage_increase_in_capacity = 0
     no_show_percentage = 0
 
+
+
     number_of_queues = mf.get_total_number_of_queues()
-
-
     mp.Patient_arrivals_jt = mp.Patient_arrivals_jt * (1 + percentage_increase_in_capacity)
     _, b_variable, _ = mm.optimize_model(weeks = weeks, N_input = N, M_input = M, shift = shift, with_rolling_horizon = False, in_iteration = False, weights = None, G = G,E = E)
 
@@ -1096,6 +1097,14 @@ def main():
         print(p, p.queue_history)
     print("Avg. waiting time:", s.calculate_waiting_times())
 
+
+
+import json
+def write_to_file(id, array):
+    # as requested in comment
+    exDict = {id: array}
+    with open('file.txt', 'w') as file:
+         file.write(json.dumps(exDict))
 
 
 if __name__ == '__main__':
