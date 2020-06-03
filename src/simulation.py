@@ -1016,14 +1016,14 @@ def main():
     q3.probability_of_treatment_queues = [0.35, 0.15, 0.5]
 
     q8.potential_treatment_queues = [q20, q21, q24]
-    q8.probability_of_treatment_queues = [7/24, 1/24, 2/3, 0]
+    q8.probability_of_treatment_queues = [0.27, 0.03, 0.60, 0.10]
 
     q12.potential_treatment_queues = [q32, q37]
-    q12.probability_of_treatment_queues = [0.3, 0.7, 0]
+    q12.probability_of_treatment_queues = [0.25, 0.65, 0.10]
 
     """
     q3.potential_treatment_queues = [q4, q7]
-    q3.probability_of_treatment_queues = [0.5,0.5,0]
+    q3.probability_of_treatment_queues = [0.35,0.15,0.5]
 
 
     arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10]#,q11,q12,q13,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24,q25,q26,q27,q28,q29,q30,q31,q32,q33,q34,q35,q36,q37,q38,q39]
