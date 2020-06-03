@@ -66,7 +66,7 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
     L_rt = mp.L_rt
     Time_limits_j = mp.Time_limits_j
 
-    K_t = mf.create_K_parameter(start_value = 100, increase_per_week = 0.5, time_periods = Time_periods)
+    K_t = mf.create_K_parameter(start_value = total_queues, increase_per_week = 0.5, time_periods = Time_periods)
     Q_ij = mf.create_Q_ij()
     queue_to_path = mf.create_queue_to_path(total_queues)
     probability_of_path = mp.probability_of_path
@@ -276,7 +276,7 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
         #Outputing the time it took to print results and write to file
         end_print = time.time()
         print("Printing:", end_print - start_print)
-        mg.create_gantt_chart(total_queues, Time_periods, mf.loadSolution(sol_file_name)["b"])
+        #mg.create_gantt_chart(total_queues, Time_periods, mf.loadSolution(sol_file_name)["b"])
 
     b_variable = mf.convert_dict(b_variable)
     q_variable = mf.convert_dict(q_variable)

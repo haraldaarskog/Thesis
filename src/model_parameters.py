@@ -141,8 +141,8 @@ t,m,m,m,m])
 
 
 #Resource capacity for resource r at day t in a week
-L_rt = np.concatenate((np.full((16,5),1000), np.full((16,2),0)), axis=1)
-"""
+#L_rt = np.concatenate((np.full((16,5),1000), np.full((16,2),0)), axis=1)
+
 L_rt = np.array([
         [160,160,160,160,160,0,0],#Physician
         [100,100,100,100,100,0,0],#Gynecologist
@@ -151,16 +151,16 @@ L_rt = np.array([
         [100,100,100,100,100,0,0],#Pathologist
         [100,100,100,100,100,0,0],#Surgeon
         [100,100,100,100,100,0,0],#Nurse
-        [100,200,200,200,200,0,0],#CT scanner
-        [200,200,200,200,200,0,0], #MRI scanner
+        [100,100,100,100,100,0,0],#CT scanner
+        [100,100,100,100,100,0,0], #MRI scanner
         [100,100,100,100,100,0,0],#Operating room
         [100,100,100,100,100,0,0], #laboratory(biopsy)
         [100,100,100,100,100,0,0], #outpatient clinic
-        [1000,1000,1000,1000,1000,0,0], #Bed
+        [1000,1000,1000,1000,1000,0,0], #Bed, not used in model
         [100,100,100,100,100,0,0], # Day unit
         [100,100,100,100,100,0,0], # Radiotherapy laboratory
         [100,100,100,100,100,0,0]]) # Meeting room
-"""
+
 resource_dict={
 ###Staff
 0: "Physician",
