@@ -18,7 +18,7 @@ sol_file_name = "output/model_solution.sol"
 #A function that runs the model
 #If with_rolling_horizon = True, input from the previous run is included
 #shift: number of days between running the model the last time and today
-def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iteration, weights, E, G):
+def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iteration, weights, E, G, K):
     start_initialization_time = time.time()
 
 
@@ -66,7 +66,7 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
     L_rt = mp.L_rt
     Time_limits_j = mp.Time_limits_j
 
-    K_t = mf.create_K_parameter(start_value = total_queues, increase_per_week = 0.5, time_periods = Time_periods)
+    K_t = mf.create_K_parameter(start_value = K, increase_per_week = 1, time_periods = Time_periods)
     Q_ij = mf.create_Q_ij()
     queue_to_path = mf.create_queue_to_path(total_queues)
     probability_of_path = mp.probability_of_path
@@ -188,6 +188,8 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
         for j in range(total_queues):
             for t in range(Time_periods):
                 model.addConstr(b_variable[j, t] == gp.quicksum(c_variable[j, t, n, m] for n in range(N) for m in range(M)))
+                if t % 7 == 5 or t % 7 == 6:
+                    model.addConstr(b_variable[j, t] == 0)
 
 
         #Resource constraints
@@ -213,9 +215,10 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
 
 
         #The number of shifts must be below a value K
-        for t in range(Time_periods):
-            model.addConstr(gp.quicksum(u_A_variable[j, t] for j in range(total_queues)) <= K_t[t])
-            model.addConstr(gp.quicksum(u_R_variable[j, t] for j in range(total_queues)) <= K_t[t])
+        for a in range(Time_periods):
+            if a % 7 == 6:
+                model.addConstr(gp.quicksum(u_A_variable[j, t] + u_R_variable[j, t] for j in range(total_queues) for t in range(a-6,a)) <= K_t[t])
+                #model.addConstr(gp.quicksum(u_R_variable[j, t] for j in range(total_queues)) <= K_t[t])
 
         #Printing the time it took to generate the constraints
         end_constraints = time.time()
@@ -276,7 +279,7 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
         #Outputing the time it took to print results and write to file
         end_print = time.time()
         print("Printing:", end_print - start_print)
-        #mg.create_gantt_chart(total_queues, Time_periods, mf.loadSolution(sol_file_name)["b"])
+        mg.create_gantt_chart(total_queues, Time_periods, mf.loadSolution(sol_file_name)["b"])
 
     b_variable = mf.convert_dict(b_variable)
     q_variable = mf.convert_dict(q_variable)

@@ -12,13 +12,13 @@ def transform_dict(d):
         if queue not in queue_set:
             queue_set.add(queue)
             some_d[queue]=[]
-        if value>0:
+        if value > 0.1:
             some_d[queue].append(key[1])
     arr1=[]
     for k in some_d:
         arr2=[]
         for value in some_d[k]:
-            t=(value, 1)
+            t=(np.round(value), 1)
             arr2.append(t)
         arr1.append(arr2)
     return arr1
@@ -70,7 +70,7 @@ def create_gantt_chart(Queues, Time_periods, variable_dict):
     for array in arrays:
         for a in array:
             time1 = a[0]
-            b_value = variable_dict[queue, time1]
+            b_value = np.round(variable_dict[queue, time1])
             ax.text(time1 + 0.4, number + 5, str(b_value))
         color = list(np.random.rand(3))
         ax.broken_barh(array, (number, 4), facecolor=color)

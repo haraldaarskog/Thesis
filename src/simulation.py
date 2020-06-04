@@ -1029,41 +1029,44 @@ def main():
     arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10]#,q11,q12,q13,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24,q25,q26,q27,q28,q29,q30,q31,q32,q33,q34,q35,q36,q37,q38,q39]
 
     #Optimization param
-    weeks = 1
+    weeks = 2
     G = None
     E = None
-    M = 60
+    M = 40
     N = int(np.round(M*3/5))
-    shift = 5
+    shift = 6
 
     #Simulation param
     simulation_horizon = 365
     percentage_increase_in_capacity = 0
     no_show_percentage = 0.05
+    implementation_weeks = 1
+    K_rol_hor = 8 # infeas på 7
 
 
 
     number_of_queues = mf.get_total_number_of_queues()
     mp.Patient_arrivals_jt = mp.Patient_arrivals_jt * (1 + percentage_increase_in_capacity)
-    _, b_variable, _ = mm.optimize_model(weeks = weeks, N_input = N, M_input = M, shift = shift, with_rolling_horizon = False, in_iteration = False, weights = None, G = G,E = E)
+    _, b_variable, _ = mm.optimize_model(weeks = weeks, N_input = N, M_input = M, shift = shift, with_rolling_horizon = False, in_iteration = False, weights = None, G = G,E = E, K = float('inf'))
 
     scheduled_appointments = mf.from_dict_to_matrix_2(b_variable, (number_of_queues, weeks*7))
-    scheduled_appointments = scheduled_appointments[:,:7]
+    scheduled_appointments = scheduled_appointments[:, :(implementation_weeks * 7)]
     s = Simulation(arr, scheduled_appointments, no_show_percentage)
-
+    print(scheduled_appointments)
 
     for i in range(simulation_horizon):
         s.next_day()
 
-        if i % 7 == 6 and i > 0:
+        if i % (implementation_weeks * 7) == (implementation_weeks * 7 - 1) and i > 0:
 
             E = s.create_E_matrix()
             G = s.create_G_matrix()
 
             create_capacity_graph(s, i + 1)
-            _, b_variable, _ = mm.optimize_model(weeks = weeks, N_input = N, M_input = M, shift = shift, with_rolling_horizon = True, in_iteration = False, weights = None, G = G, E = E)
+            _, b_variable, _ = mm.optimize_model(weeks = weeks, N_input = N, M_input = M, shift = shift, with_rolling_horizon = True, in_iteration = False, weights = None, G = G, E = E, K = K_rol_hor)
             scheduled_appointments = mf.from_dict_to_matrix_2(b_variable,(number_of_queues, weeks*7))
-            scheduled_appointments = scheduled_appointments[:,:7]
+            scheduled_appointments = scheduled_appointments[:,:(implementation_weeks * 7)]
+
             s.update_appointments(scheduled_appointments)
 
 
