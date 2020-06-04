@@ -1029,7 +1029,7 @@ def main():
     arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10]#,q11,q12,q13,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24,q25,q26,q27,q28,q29,q30,q31,q32,q33,q34,q35,q36,q37,q38,q39]
 
     #Optimization param
-    weeks = 2
+    weeks = 3
     G = None
     E = None
     M = 40
@@ -1041,7 +1041,7 @@ def main():
     percentage_increase_in_capacity = 0
     no_show_percentage = 0.05
     implementation_weeks = 1
-    K_rol_hor = 8 # infeas på 7
+    K_rol_hor = 1 # infeas på 7
 
 
 
@@ -1052,7 +1052,6 @@ def main():
     scheduled_appointments = mf.from_dict_to_matrix_2(b_variable, (number_of_queues, weeks*7))
     scheduled_appointments = scheduled_appointments[:, :(implementation_weeks * 7)]
     s = Simulation(arr, scheduled_appointments, no_show_percentage)
-    print(scheduled_appointments)
 
     for i in range(simulation_horizon):
         s.next_day()

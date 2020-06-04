@@ -206,19 +206,16 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
                         if m > Time_limits_j[j]:
                             model.addConstr(q_variable[j, t, n, m] <= 0)
 
-
         #Shifting constraints
-        #rint(A_jt.shape)
         for j in range(total_queues):
             for t in range(Time_periods - shift - 1):
                 model.addConstr(u_A_variable[j, t] - u_R_variable[j, t] == b_variable[j, t] - A_jt[j, t])
 
 
         #The number of shifts must be below a value K
-        for a in range(Time_periods):
-            if a % 7 == 6:
-                model.addConstr(gp.quicksum(u_A_variable[j, t] + u_R_variable[j, t] for j in range(total_queues) for t in range(a-6,a)) <= K_t[t])
-                #model.addConstr(gp.quicksum(u_R_variable[j, t] for j in range(total_queues)) <= K_t[t])
+        for t in range(Time_periods - shift - 1):
+                model.addConstr(gp.quicksum(u_A_variable[j, t] for j in range(total_queues)) <= 1*K_t[t])
+                model.addConstr(gp.quicksum(u_R_variable[j, t] for j in range(total_queues)) <= 10*K_t[t])
 
         #Printing the time it took to generate the constraints
         end_constraints = time.time()
@@ -295,7 +292,7 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
 #Running the model
 def run_model():
     w = 2
-    optimize_model(weeks = w, N_input = 20, M_input = 20, shift = 6, with_rolling_horizon = False, in_iteration = False, weights = None, E = None, G = None)
+    optimize_model(weeks = w, N_input = 36, M_input = 60, shift = 6, with_rolling_horizon = False, in_iteration = False, weights = None, E = None, G = None, K = 100)
 
 if __name__ == '__main__':
     run_model()
