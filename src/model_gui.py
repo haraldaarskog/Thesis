@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as font_manager
 import numpy as np
+import model_functions as mf
 
 
 def transform_dict(d):
@@ -65,15 +66,18 @@ def create_gantt_chart(Queues, Time_periods, variable_dict):
     queue_dict={}
     number = 8
     arrays=transform_dict(variable_dict)
-
+    color_array=[]
+    np.random.seed(0)
+    for a in range(mf.get_total_number_of_queues()):
+            color_array.append(list(np.random.rand(3)))
     queue = 0
     for array in arrays:
         for a in array:
             time1 = a[0]
             b_value = np.round(variable_dict[queue, time1])
             ax.text(time1 + 0.4, number + 5, str(b_value))
-        color = list(np.random.rand(3))
-        ax.broken_barh(array, (number, 4), facecolor=color)
+        
+        ax.broken_barh(array, (number, 4), facecolor=color_array[queue])
         number+=10
         queue += 1
 

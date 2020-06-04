@@ -102,7 +102,7 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
 
         #initializing the model
         model = gp.Model("mip_queue_model")
-
+        model.setParam('TimeLimit', 60)
         #surpressing gurobi output
         #model.setParam("OutputFlag", 0)
 
@@ -214,8 +214,8 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
 
         #The number of shifts must be below a value K
         for t in range(Time_periods - shift - 1):
-                model.addConstr(gp.quicksum(u_A_variable[j, t] for j in range(total_queues)) <= 1*K_t[t])
-                model.addConstr(gp.quicksum(u_R_variable[j, t] for j in range(total_queues)) <= 10*K_t[t])
+                model.addConstr(gp.quicksum(u_A_variable[j, t] + u_R_variable[j, t] for j in range(total_queues)) <= 1*K_t[t])
+                #model.addConstr(gp.quicksum(u_R_variable[j, t] for j in range(total_queues)) <= 3*K_t[t])
 
         #Printing the time it took to generate the constraints
         end_constraints = time.time()

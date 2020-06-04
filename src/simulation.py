@@ -941,7 +941,7 @@ def main():
     q0 = Queue(0, q1, True, uterine_demand/5, False, art[0], "uterine", 0)
 
 
-
+    """
     #Livmor_treat 1
     q6 = Queue(6, None, False, None, True, art[9], "uterine", 9)
     q5 = Queue(5, q6, False, None, True, art[1], "uterine", 1)
@@ -1024,12 +1024,12 @@ def main():
     """
     q3.potential_treatment_queues = [q4, q7]
     q3.probability_of_treatment_queues = [0.35,0.15,0.5]
+    """
 
-
-    arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10]#,q11,q12,q13,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24,q25,q26,q27,q28,q29,q30,q31,q32,q33,q34,q35,q36,q37,q38,q39]
+    arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24,q25,q26,q27,q28,q29,q30,q31,q32,q33,q34,q35,q36,q37,q38,q39]
 
     #Optimization param
-    weeks = 3
+    weeks = 2
     G = None
     E = None
     M = 40
@@ -1041,8 +1041,7 @@ def main():
     percentage_increase_in_capacity = 0
     no_show_percentage = 0.05
     implementation_weeks = 1
-    K_rol_hor = 1 # infeas på 7
-
+    K_rol_hor = 3
 
 
     number_of_queues = mf.get_total_number_of_queues()

@@ -22,18 +22,18 @@ activity_dict={
 #Patient processes. Patient process on rows, activity on columns
 #1 if patient process conducts activity, 0 otherwise
 diagnostic_processes = np.array([
-        [0,1,2,3]])#, #Livmor. 0/3
-        #[0,6,4,3,7]])#, #Livmorhals. Start: 4/8
-        #[0,2,6,5]]) #Eggstokk. Start: 9/12
+        [0,1,2,3], #Livmor. 0/3
+        [0,6,4,3,7],#, #Livmorhals. Start: 4/8
+        [0,2,6,5]]) #Eggstokk. Start: 9/12
 
 treatment_processes = np.array([
         [6,1,9], #13/17: Livmor, høyrisiko
-        [6,1,9,8]])#, #18/23: Livmor: tilleggsbehandling, 6 kurer cellegift
-        #[9], #24/26:Livmorhals
-        #[9,5,10], #27/31: Livmorhals
-        #[3,8,10,14,10,13,8,4]]) #32/39: Livmorhals
-        #[6,8,9,6,8], #40/46: Eggstokk
-        #[9,6,8]]) #47/51: Eggstokk
+        [6,1,9,8],#, #18/23: Livmor: tilleggsbehandling, 6 kurer cellegift
+        [9], #24/26:Livmorhals
+        [9,5,10], #27/31: Livmorhals
+        [3,8,10,14,10,13,8,4], #32/39: Livmorhals
+        [6,8,9,6,8], #40/46: Eggstokk
+        [9,6,8]]) #47/51: Eggstokk
 
 
 #patient processes on rows, treatment paths on columns. Det entries denotes the
@@ -88,9 +88,9 @@ week_length = 7
 
 
 #WEEKLY PATIENT DEMAND
-uterine_demand = 4
-cervical_demand = 3
-ovarian_demand = 4
+uterine_demand = 4 * 2
+cervical_demand = 3 * 2
+ovarian_demand = 4 * 2
 
 
 
