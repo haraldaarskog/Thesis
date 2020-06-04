@@ -16,8 +16,9 @@ import names
 
 #Master class
 class Simulation:
-    def __init__(self, all_queues, appointments, no_show_prob):
+    def __init__(self, all_queues, appointments, no_show_prob, warm_up_period):
         self.all_queues = all_queues
+        self.warm_up_period = warm_up_period
         self.day = -1
         self.time = 0
         self.total_num_in_queue = [0]
@@ -82,7 +83,8 @@ class Simulation:
             return 0
         sum = 0
         for patient in self.patient_exit_list:
-            sum += patient.number_of_days_in_system
+            if patient.entering_day >= self.warm_up_period:
+                sum += patient.number_of_days_in_system
         return sum/number_of_exits
 
 
@@ -799,12 +801,12 @@ def create_queue_development_all_pathways(s):
 
 
 
-def create_cumulative_waiting_times(simulation_model, m_range):
+def create_cumulative_waiting_times(simulation_model, m_range, warm_up_period):
     exit_patients = simulation_model.patient_exit_list
     m_array = np.zeros(m_range)
     m_array_2 = np.arange(0,m_range)
     for patient in exit_patients:
-        if patient.entering_day > 50:
+        if patient.entering_day > warm_up_period:
             m_value = patient.number_of_days_in_system
             m_array[m_value] += 1
 
@@ -831,9 +833,9 @@ def create_cum_distr_all_diagnosis(simulation_model, m_range):
     cervical_flag = True
     ovarian_flag = True
 
-    m_array_2 = np.arange(0,m_range)
+    m_array_2 = np.arange(0,m_range,warm_up_period)
     for patient in exit_patients:
-        if patient.entering_day > 50:
+        if patient.entering_day > warm_up_period:
             if patient.diagnosis == "uterine":
                 uterine_array[patient.number_of_days_in_system] += 1
             if patient.diagnosis == "cervical":
@@ -878,14 +880,14 @@ def create_capacity_graph(sim, day_horizon):
     plt.close()
 
 
-def create_total_time_in_system(sim, m_range):
+def create_total_time_in_system(sim, m_range,warm_up_period):
     exit_patients = sim.patient_exit_list
     sum = 0
     m_range = m_range + 30
     m_array = np.zeros(m_range)
     m_array_2 = np.arange(0,m_range)
     for patient in exit_patients:
-        if patient.entering_day > 50:
+        if patient.entering_day > warm_up_period:
             days_in_system = (patient.exit_day-patient.entering_day)
             m_array[days_in_system] += 1
 
@@ -941,7 +943,7 @@ def main():
     q0 = Queue(0, q1, True, uterine_demand/5, False, art[0], "uterine", 0)
 
 
-    """
+
     #Livmor_treat 1
     q6 = Queue(6, None, False, None, True, art[9], "uterine", 9)
     q5 = Queue(5, q6, False, None, True, art[1], "uterine", 1)
@@ -1024,24 +1026,26 @@ def main():
     """
     q3.potential_treatment_queues = [q4, q7]
     q3.probability_of_treatment_queues = [0.35,0.15,0.5]
-    """
 
-    arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24,q25,q26,q27,q28,q29,q30,q31,q32,q33,q34,q35,q36,q37,q38,q39]
+
+    arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10]#,q11,q12,q13,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24,q25,q26,q27,q28,q29,q30,q31,q32,q33,q34,q35,q36,q37,q38,q39]
 
     #Optimization param
     weeks = 2
     G = None
     E = None
-    M = 40
+    M = 60
     N = int(np.round(M*3/5))
-    shift = 6
+
 
     #Simulation param
     simulation_horizon = 365
     percentage_increase_in_capacity = 0
     no_show_percentage = 0.05
     implementation_weeks = 1
-    K_rol_hor = 3
+    shift = implementation_weeks * 7 - 1
+    K_rol_hor = 5
+    warm_up_period = 50
 
 
     number_of_queues = mf.get_total_number_of_queues()
@@ -1050,7 +1054,7 @@ def main():
 
     scheduled_appointments = mf.from_dict_to_matrix_2(b_variable, (number_of_queues, weeks*7))
     scheduled_appointments = scheduled_appointments[:, :(implementation_weeks * 7)]
-    s = Simulation(arr, scheduled_appointments, no_show_percentage)
+    s = Simulation(arr, scheduled_appointments, no_show_percentage, warm_up_period)
 
     for i in range(simulation_horizon):
         s.next_day()
@@ -1069,9 +1073,9 @@ def main():
 
 
             resource_usage_plot(s,i + 1,simulation_horizon)
-            create_cumulative_waiting_times(s, M)
-            create_cum_distr_all_diagnosis(s, M)
-            create_total_time_in_system(s, M)
+            create_cumulative_waiting_times(s, M, warm_up_period)
+            create_cum_distr_all_diagnosis(s, M, warm_up_period)
+            create_total_time_in_system(s, M, warm_up_period)
             create_queue_development_all_pathways(s)
             #create_stacked_plot(s)
             if i > 6:

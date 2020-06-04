@@ -284,8 +284,8 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
     #print(discharged + sum_exit_treatment)
     total_elapsed_time = time.time() - overall_start
     #tar noe tid
-    if not in_iteration == True:
-        mf.write_to_file(total_queues, Time_periods, N, M, objective_value, number_of_variables, number_of_constraints, runtime, total_elapsed_time)
+    #if not in_iteration == True:
+        #mf.write_to_file(total_queues, Time_periods, N, M, objective_value, number_of_variables, number_of_constraints, runtime, total_elapsed_time)
     return q_variable, b_variable, objective_value
 
 
