@@ -16,9 +16,8 @@ import names
 
 #Master class
 class Simulation:
-    def __init__(self, all_queues, appointments, no_show_prob, warm_up_period):
+    def __init__(self, all_queues, appointments, no_show_prob):
         self.all_queues = all_queues
-        self.warm_up_period = warm_up_period
         self.day = -1
         self.time = 0
         self.total_num_in_queue = [0]
@@ -77,14 +76,13 @@ class Simulation:
 
 
 
-    def calculate_waiting_times(self):
+    def calculate_waiting_times(self, warm_up_period):
         number_of_exits = len(self.patient_exit_list)
         if number_of_exits == 0:
             return 0
         sum = 0
         for patient in self.patient_exit_list:
-            if patient.entering_day >= self.warm_up_period:
-                sum += patient.number_of_days_in_system
+            sum += patient.number_of_days_in_system
         return sum/number_of_exits
 
 
@@ -822,7 +820,7 @@ def create_cumulative_waiting_times(simulation_model, m_range, warm_up_period):
     plt.savefig("simulation/sim_figures/simulation_cumulative.png")
     plt.close()
 
-def create_cum_distr_all_diagnosis(simulation_model, m_range):
+def create_cum_distr_all_diagnosis(simulation_model, m_range, warm_up_period):
     exit_patients = simulation_model.patient_exit_list
 
     uterine_array = np.zeros(m_range)
@@ -833,7 +831,7 @@ def create_cum_distr_all_diagnosis(simulation_model, m_range):
     cervical_flag = True
     ovarian_flag = True
 
-    m_array_2 = np.arange(0,m_range,warm_up_period)
+    m_array_2 = np.arange(0,m_range)
     for patient in exit_patients:
         if patient.entering_day > warm_up_period:
             if patient.diagnosis == "uterine":
@@ -880,7 +878,7 @@ def create_capacity_graph(sim, day_horizon):
     plt.close()
 
 
-def create_total_time_in_system(sim, m_range,warm_up_period):
+def create_total_time_in_system(sim, m_range, warm_up_period):
     exit_patients = sim.patient_exit_list
     sum = 0
     m_range = m_range + 30
@@ -1034,17 +1032,16 @@ def main():
     weeks = 2
     G = None
     E = None
-    M = 60
+    M = 40
     N = int(np.round(M*3/5))
-
+    shift = 6
 
     #Simulation param
     simulation_horizon = 365
     percentage_increase_in_capacity = 0
     no_show_percentage = 0.05
     implementation_weeks = 1
-    shift = implementation_weeks * 7 - 1
-    K_rol_hor = 5
+    K_rol_hor = 6
     warm_up_period = 50
 
 
@@ -1054,7 +1051,7 @@ def main():
 
     scheduled_appointments = mf.from_dict_to_matrix_2(b_variable, (number_of_queues, weeks*7))
     scheduled_appointments = scheduled_appointments[:, :(implementation_weeks * 7)]
-    s = Simulation(arr, scheduled_appointments, no_show_percentage, warm_up_period)
+    s = Simulation(arr, scheduled_appointments, no_show_percentage)
 
     for i in range(simulation_horizon):
         s.next_day()
@@ -1100,7 +1097,7 @@ def main():
     print(s.patient_exit_list)
     for p in s.patient_exit_list:
         print(p, p.queue_history)
-    print("Avg. waiting time:", s.calculate_waiting_times())
+    print("Avg. waiting time:", s.calculate_waiting_times(warm_up_period))
 
 
 
