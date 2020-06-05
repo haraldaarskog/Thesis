@@ -72,6 +72,8 @@ def print_model_status(status, runtime):
     elif status == 3:
         print(colored("Model is infeasible", 'red', attrs = ['bold']))
         sys.exit()
+    elif status == 9:
+        print("Time limit reached")
     else:
         print(colored("Check gurobi status codes", 'red', attrs = ['bold']))
         sys.exit()
