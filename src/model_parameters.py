@@ -88,9 +88,9 @@ week_length = 7
 
 
 #WEEKLY PATIENT DEMAND
-uterine_demand = 4 * 5
-cervical_demand = 3 * 5
-ovarian_demand = 4 * 5
+uterine_demand = 4 * 1
+cervical_demand = 3 * 1
+ovarian_demand = 4 * 1
 
 
 #New demand in queue j in time period t
@@ -136,6 +136,30 @@ t,m,m,m,m,
 t,m,m,m,m,m,m,m,
 t,m,m,m,m,m,m,
 t,m,m,m,m])
+
+f1 = 6
+s1 = 22
+t1 = 36
+
+
+Time_limits_test = np.array([
+m,f1,m,s1,
+t1,m,m,
+t1,m,m,m])
+
+"""
+Time_limits_test = np.array([
+m,f1,m,s1,
+m,f1,m,m,s1,
+m,f1,m,s1,
+t1,m,m,m,m,
+t1,m,m,m,m,m,
+t1,m,m,
+t1,m,m,m,m,
+t1,m,m,m,m,m,m,m,
+t1,m,m,m,m,m,m,
+t1,m,m,m,m])
+"""
 
 
 

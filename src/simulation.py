@@ -322,6 +322,7 @@ class Queue:
         self.is_treatment_queue = is_treatment_queue
         self.diagnosis = diagnosis
         self.activity = activity
+        self.time_limit = mp.Time_limits_test[self.id]
 
         self.patient_list = []
         self.no_show_list = []
@@ -363,6 +364,11 @@ class Queue:
     def __str__(self):
      return "Queue ("+str(self.id)+"): " + str(self.get_number_of_patients_in_queue())
 
+
+    def check_time_limit(self, patient):
+        return self.time_limit - patient.days_in_system
+
+
     #Resource methods
     def activate_resources(self, service_time):
         if self.day not in self.resource_usage.keys():
@@ -371,7 +377,6 @@ class Queue:
         for key in self.resource_dict:
             hours_demanded = self.resource_dict[key]
             self.resource_usage[self.day][key] += service_time * hours_demanded
-
 
 
     #SETTERS
@@ -651,7 +656,6 @@ class Patient:
     def __str__(self):
         return "Name: " + self.name + ", N: " + str(self.number_of_days_in_queue) + ", M: " + str(self.number_of_days_in_system)
 
-
     def get_number_of_days_in_system(self):
         return self.number_of_days_in_system
 
@@ -920,8 +924,40 @@ def resource_usage_plot(s, active_days, sim_horizon):
     plt.grid(True)
     plt.savefig("simulation/sim_figures/resource_usage.png")
     plt.close()
+"""
+def time_limit_violation_plot(s, sim_days, warm_up_period):
+    days = np.zeros(sim_days)
+    for day in range(sim_days):
+        violation_amount, violation_days = calculate_time_limit_violations(s, warm_up_period)
+"""
 
 
+def calculate_time_limit_violations(s, warm_up_period):
+    time_limit_violations=[0,0,0]
+    total_number_of_days_exceeding_limit = [0,0,0]
+    for patient in s.patient_exit_list:
+        if patient.entering_day >= warm_up_period:
+            for queue in patient.queue_history:
+                queue_stage = find_queue_stage(queue)
+                if queue_stage == None:
+                    continue
+                queue_time_limit = mp.Time_limits_test[queue]
+                m_value = patient.queue_history[queue][2]
+                if m_value > queue_time_limit:
+                    time_limit_violations[queue_stage] = time_limit_violations[queue_stage] + 1
+                    total_number_of_days_exceeding_limit[queue_stage] = total_number_of_days_exceeding_limit[queue_stage] + (m_value - queue_time_limit)
+                    print(patient.queue_history)
+    return time_limit_violations, total_number_of_days_exceeding_limit
+
+def find_queue_stage(j):
+    if mp.Time_limits_test[j] == mp.f1:
+        return 0
+    elif mp.Time_limits_test[j] == mp.s1:
+        return 1
+    elif mp.Time_limits_test[j] == mp.t1:
+        return 2
+    else:
+        return None
 
 def main():
     np.random.seed(0)
@@ -1032,7 +1068,7 @@ def main():
     weeks = 2
     G = None
     E = None
-    M = 80
+    M = 60
     N = int(np.round(M*3/5))
     shift = 6
 
@@ -1098,7 +1134,7 @@ def main():
     for p in s.patient_exit_list:
         print(p, p.queue_history)
     print("Avg. waiting time:", s.calculate_waiting_times(warm_up_period))
-
+    print(calculate_time_limit_violations(s, warm_up_period))
 
 
 if __name__ == '__main__':
