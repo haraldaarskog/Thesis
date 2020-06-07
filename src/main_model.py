@@ -132,7 +132,10 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
         if not in_iteration == True:
             print("Generating variables:", end_variables - start_variables)
         #******************** Objective function ********************
-        model.setObjective(gp.quicksum(mof.obj_weights_m(j, m) * q_variable[j, t, n, m]  for j in range(total_queues) for t in range(Time_periods) for n in range(N) for m in range(M)), GRB.MINIMIZE)
+        if weights is not None:
+            model.setObjective(gp.quicksum(weights[j,n] * q_variable[j, t, n, m]  for j in range(total_queues) for t in range(Time_periods) for n in range(N) for m in range(M)), GRB.MINIMIZE)
+        else:
+            model.setObjective(gp.quicksum(mof.obj_weights_m(j, m) * q_variable[j, t, n, m]  for j in range(total_queues) for t in range(Time_periods) for n in range(N) for m in range(M)), GRB.MINIMIZE)
 
         #******************** Constraints ********************
 

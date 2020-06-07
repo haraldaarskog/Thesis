@@ -1032,7 +1032,7 @@ def main():
     weeks = 2
     G = None
     E = None
-    M = 60
+    M = 80
     N = int(np.round(M*3/5))
     shift = 6
 
@@ -1041,7 +1041,7 @@ def main():
     percentage_increase_in_capacity = 0
     no_show_percentage = 0.05
     implementation_weeks = 1
-    K_rol_hor = 7
+    K_rol_hor = 1000
     warm_up_period = 50
 
 

@@ -88,10 +88,9 @@ week_length = 7
 
 
 #WEEKLY PATIENT DEMAND
-uterine_demand = 4
-cervical_demand = 3
-ovarian_demand = 4
-
+uterine_demand = 4 * 5
+cervical_demand = 3 * 5
+ovarian_demand = 4 * 5
 
 
 #New demand in queue j in time period t
@@ -143,7 +142,7 @@ t,m,m,m,m])
 #Resource capacity for resource r at day t in a week
 #L_rt = np.concatenate((np.full((16,5),1000), np.full((16,2),0)), axis=1)
 
-L_rt = np.array([
+L_rt = (11/40) * np.array([
         [160,160,160,160,160,0,0],#Physician
         [100,100,100,100,100,0,0],#Gynecologist
         [100,100,100,100,100,0,0],#Radiologist
