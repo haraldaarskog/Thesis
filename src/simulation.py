@@ -764,9 +764,6 @@ def create_stacked_plot(s):
     plt.close()
 
 def create_queue_development_all_pathways(s):
-    #uterine_cancer = [0,1,2,3,13,14,15,16,17,18,19]
-    #cerivcal_cancer = [4,5,6,7,8,20,21,22,23,24,25,26,27,28,29,30,31]
-    #ovarian_cancer = [9,10,11,12,32,33,34,35,36,37,38,39]
 
     uterine_flag = True
     cervical_flag = True
@@ -914,22 +911,51 @@ def create_total_time_in_system(sim, m_range, warm_up_period):
 
 def resource_usage_plot(s, active_days, sim_horizon):
     res_dict = s.calculate_resource_usage()
-    arr = np.zeros((mp.L_rt.shape[0], sim_horizon))
-    days = np.arange(0,active_days)
+    arr = np.zeros(active_days)
+    arr_available = np.zeros(active_days)
+    days = np.arange(0, active_days)
     for day in res_dict:
         res_usage = res_dict[day]
         for i in range(len(res_usage)):
-            arr[i, day] = res_usage[i]
-
-    for r in range(arr.shape[0]):
-        plt.plot(days, arr[r,:active_days], linestyle='-', label = str(r))
-    plt.xlabel('Days')
-    plt.ylabel('Hours')
+            arr[day] = arr[day] + res_usage[i]
+    
+    for d in range(0, active_days):
+        for r in range(mp.L_rt.shape[0]):
+            arr_available[d] = arr_available[d] + mp.L_rt[r, d % 7] 
+    
+    res1 = average_days(arr, len(arr))
+    res2 = average_days(arr_available, len(arr_available))
+    share_of_resources_used = np.divide(res1, res2)
+    
+    plt.plot(np.arange(0, len(share_of_resources_used)), share_of_resources_used, linestyle='-', label = "Resource utilization")
+    
+    plt.xlabel('Week')
+    plt.ylabel('Share of total capacity')
+    
     plt.legend(loc='best')
-    plt.title('Resource usage')
+    
+    
+    plt.title('Resource utilization')
     plt.grid(True)
     plt.savefig("simulation/sim_figures/resource_usage.png")
     plt.close()
+
+def average_days(array, horizon):
+    
+    week = 0
+    step = 7
+    week_list = np.arange(0,horizon,step)
+    return_array = np.zeros(horizon // step)
+    for i in week_list:
+        if i + step > len(array):
+            break
+        sum_arr = 0
+        for j in range(step):
+            sum_arr = sum_arr + array[i + j]
+        return_array[week] = sum_arr/5
+        week += 1
+    return return_array
+    
 
 def time_limit_violation_plot(s, sim_days, warm_up_period):
     sim_days += 1
@@ -953,7 +979,7 @@ def time_limit_violation_plot(s, sim_days, warm_up_period):
 
     cum1 = np.divide(np.cumsum(violations_1), total_patients_exited)
     cum2 = np.divide(np.cumsum(violations_2), total_patients_exited)
-    cum3 = np.divide(np.cumsum(violations_3), total_patients_exited)
+    cum3 = np.divide(np.cumsum(violations_3), len(s.patient_exit_list))
     #cum_tot = np.add(np.add(cum1, cum2), cum3)
     #cum_tot = np.divide(cum_tot, total_patients_exited)
     ax1 = plt.gca()
@@ -969,7 +995,8 @@ def time_limit_violation_plot(s, sim_days, warm_up_period):
     ax1.set_ylim(ymax=1)
     lns = a+b+c+d
     labs = [l.get_label() for l in lns]
-    ax1.legend(lns, labs, loc=0)
+    plt.legend(loc='best')
+  
 
     plt.title('Time limit violations')
     ax1.grid()
@@ -1025,7 +1052,7 @@ def main():
     q1 = Queue(1, q2, False, None, False, art[1], "uterine", 1)
     q0 = Queue(0, q1, True, uterine_demand/5, False, art[0], "uterine", 0)
 
-
+    """
 
     #Livmor_treat 1
     q6 = Queue(6, None, False, None, True, art[9], "uterine", 9)
@@ -1109,9 +1136,9 @@ def main():
     """
     q3.potential_treatment_queues = [q4, q7]
     q3.probability_of_treatment_queues = [0.35,0.15,0.5]
+    """
 
-
-    arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10]#,q11,q12,q13,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24,q25,q26,q27,q28,q29,q30,q31,q32,q33,q34,q35,q36,q37,q38,q39]
+    arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24,q25,q26,q27,q28,q29,q30,q31,q32,q33,q34,q35,q36,q37,q38,q39]
 
     #Optimization param
     weeks = 2
@@ -1140,6 +1167,7 @@ def main():
 
     for i in range(simulation_horizon):
         s.next_day()
+        
         if i % (implementation_weeks * 7) == (implementation_weeks * 7 - 1) and i > 0:
             E = s.create_E_matrix()
             G = s.create_G_matrix()
@@ -1152,15 +1180,15 @@ def main():
             s.update_appointments(scheduled_appointments)
 
 
-            resource_usage_plot(s,i + 1,simulation_horizon)
+            resource_usage_plot(s, i + 1, simulation_horizon)
             create_cumulative_waiting_times(s, M, warm_up_period)
             create_cum_distr_all_diagnosis(s, M, warm_up_period)
             create_total_time_in_system(s, M, warm_up_period)
             create_queue_development_all_pathways(s)
-            #print(calculate_time_limit_violations(s, i, warm_up_period))
             time_limit_violation_plot(s, i, warm_up_period)
+            resource_usage_plot(s, i + 1, simulation_horizon)
 
-            #create_stacked_plot(s)
+            create_stacked_plot(s)
             if i > 6:
                 create_total_queue_development(s)
 
@@ -1179,12 +1207,9 @@ def main():
     print("Discharged from diagnosis:",s.summarize_discharged_from_diagnosis())
     if s.total_patients_generated > 0:
         print("Exited/generated:",(s.total_patients_exited + s.summarize_discharged_from_diagnosis())/s.total_patients_generated)
-    #print(s.get_info_about_every_patient_in_system())
-    print(s.patient_exit_list)
-    for p in s.patient_exit_list:
-        print(p, p.queue_history)
     print("Avg. waiting time:", s.calculate_waiting_times(warm_up_period))
-    print(calculate_time_limit_violations(s, warm_up_period, None))
+    print(calculate_time_limit_violations(s, simulation_horizon, warm_up_period))
+
 
 
 if __name__ == '__main__':
@@ -1195,3 +1220,6 @@ if __name__ == '__main__':
     print("\n")
     print("******* END  *******")
     print("\n")
+    #array = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
+    #a = average_days(array,15,7)
+    #print(a)

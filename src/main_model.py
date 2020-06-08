@@ -244,10 +244,10 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
     #discharged = mf.calculate_discharged_patients(c_variable)
     if not in_iteration == True:
         start_print = time.time()
-        mop.print_variables(q_variable, c_variable, b_variable, u_A_variable, u_R_variable)
+        #mop.print_variables(q_variable, c_variable, b_variable, u_A_variable, u_R_variable)
 
-        model.write("output/model.lp")
-        model.write(sol_file_name)
+        #model.write("output/model.lp")
+        #model.write(sol_file_name)
 
         number_of_constraints = len(model.getConstrs())
 

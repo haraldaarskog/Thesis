@@ -22,18 +22,18 @@ activity_dict={
 #Patient processes. Patient process on rows, activity on columns
 #1 if patient process conducts activity, 0 otherwise
 diagnostic_processes = np.array([
-        [0,1,2,3]])#, #Livmor. 0/3
-        #[0,6,4,3,7],#, #Livmorhals. Start: 4/8
-        #[0,2,6,5]]) #Eggstokk. Start: 9/12
+        [0,1,2,3], #Livmor. 0/3
+        [0,6,4,3,7], #Livmorhals. Start: 4/8
+        [0,2,6,5]]) #Eggstokk. Start: 9/12
 
 treatment_processes = np.array([
         [6,1,9], #13/17: Livmor, høyrisiko
-        [6,1,9,8]])#,#, #18/23: Livmor: tilleggsbehandling, 6 kurer cellegift
-        #[9], #24/26:Livmorhals
-        #[9,5,10], #27/31: Livmorhals
-        #[3,8,10,14,10,13,8,4], #32/39: Livmorhals
-        #[6,8,9,6,8], #40/46: Eggstokk
-        #[9,6,8]]) #47/51: Eggstokk
+        [6,1,9,8],#, #18/23: Livmor: tilleggsbehandling, 6 kurer cellegift
+        [9], #24/26:Livmorhals
+        [9,5,10], #27/31: Livmorhals
+        [3,8,10,14,10,13,8,4], #32/39: Livmorhals
+        [6,8,9,6,8], #40/46: Eggstokk
+        [9,6,8]]) #47/51: Eggstokk
 
 
 #patient processes on rows, treatment paths on columns. Det entries denotes the
@@ -129,44 +129,43 @@ Time_limits_j = np.array([
 m,f,m,s,
 m,f,m,m,s,
 m,f,m,s,
-t,m,m,m,m,
-t,m,m,m,m,m,
 t,m,m,
-t,m,m,m,m,
+t,m,m,m,
+t,
+t,m,m,
 t,m,m,m,m,m,m,m,
-t,m,m,m,m,m,m,
-t,m,m,m,m])
-
-f1 = 1#6
-s1 = 3#22
-t1 = 6#36
+t,m,m,m,m,
+t,m,m])
 
 
-Time_limits_test = np.array([
-m,f1,m,s1,
-t1,m,m,
-t1,m,m,m])
+f1 = 6
+s1 = 22
+t1 = 36
 
-"""
 Time_limits_test = np.array([
 m,f1,m,s1,
 m,f1,m,m,s1,
 m,f1,m,s1,
-t1,m,m,m,m,
-t1,m,m,m,m,m,
 t1,m,m,
-t1,m,m,m,m,
+t1,m,m,m,
+t1,
+t1,m,m,
 t1,m,m,m,m,m,m,m,
-t1,m,m,m,m,m,m,
-t1,m,m,m,m])
-"""
+t1,m,m,m,m,
+t1,m,m])
 
+"""
+Time_limits_test = np.array([
+m,f1,m,s1,
+t1,m,m,
+t1,m,m,m])
+"""
 
 
 #Resource capacity for resource r at day t in a week
 #L_rt = np.concatenate((np.full((16,5),1000), np.full((16,2),0)), axis=1)
 
-L_rt = (11/40) * np.array([
+L_rt = np.array([
         [160,160,160,160,160,0,0],#Physician
         [80,80,80,80,80,0,0],#Gynecologist
         [80,80,80,80,80,0,0],#Radiologist
@@ -179,10 +178,10 @@ L_rt = (11/40) * np.array([
         [100,100,100,100,100,0,0],#Operating room
         [100,100,100,100,100,0,0], #laboratory(biopsy)
         [100,100,100,100,100,0,0], #outpatient clinic
-        [1000,1000,1000,1000,1000,0,0], #Bed, not used in model
+        [0,0,0,0,0,0,0], #Bed, not used in model
         [100,100,100,100,100,0,0], # Day unit
         [100,100,100,100,100,0,0], # Radiotherapy laboratory
-        [1000,1000,1000,1000,1000,0,0]]) # Meeting room
+        [100,100,100,100,100,0,0]]) # Meeting room
 
 resource_dict={
 ###Staff
