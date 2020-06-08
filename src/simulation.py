@@ -476,7 +476,7 @@ class Queue:
 
     def update_appointment_capacity(self):
         self.appointment_capacity = self.appointments[self.day]
-        print("Capacity of queue:",self.id,"is:",self.appointment_capacity)
+        #print("Capacity of queue:",self.id,"is:",self.appointment_capacity)
 
     def decrease_appointment_capacity(self):
         if self.appointment_capacity > 0:
@@ -914,6 +914,9 @@ def resource_usage_plot(s, active_days, sim_horizon):
     arr = np.zeros(active_days)
     arr_available = np.zeros(active_days)
     days = np.arange(0, active_days)
+    
+    arr_available_radiologist = np.zeros(active_days)
+    arr_radiologist = np.zeros(active_days)
     for day in res_dict:
         res_usage = res_dict[day]
         for i in range(len(res_usage)):
@@ -923,12 +926,31 @@ def resource_usage_plot(s, active_days, sim_horizon):
         for r in range(mp.L_rt.shape[0]):
             arr_available[d] = arr_available[d] + mp.L_rt[r, d % 7] 
     
+    
+    
+    #RADIOLOGER
+    for r in range(mp.L_rt.shape[0]):
+        for d in range(0, active_days):
+            arr_available_radiologist[d] = mp.L_rt[r, d % 7]
+            
+        for day in res_dict:
+            res_usage = res_dict[day]
+            arr_radiologist[day] = res_usage[r]
+            
+        res3 = average_days(arr_radiologist, len(arr_radiologist))
+        res4 = average_days(arr_available_radiologist, len(arr_available_radiologist))
+        share_of_resources_used_2 = np.divide(res3, res4)
+        plt.plot(np.arange(0, len(share_of_resources_used_2)), share_of_resources_used_2, linestyle='-', label = str(r))
+
+    
     res1 = average_days(arr, len(arr))
     res2 = average_days(arr_available, len(arr_available))
-    share_of_resources_used = np.divide(res1, res2)
+    share_of_resources_used_1 = np.divide(res1, res2)
     
-    plt.plot(np.arange(0, len(share_of_resources_used)), share_of_resources_used, linestyle='-', label = "Resource utilization")
     
+    
+    plt.plot(np.arange(0, len(share_of_resources_used_1)), share_of_resources_used_1, linestyle='-', label = "Resource utilization")
+
     plt.xlabel('Week')
     plt.ylabel('Share of total capacity')
     
@@ -985,9 +1007,9 @@ def time_limit_violation_plot(s, sim_days, warm_up_period):
     ax1 = plt.gca()
     ax2 = ax1.twinx()
     #g = ax1.plot(days, cum_tot, linestyle='-', label="tot")
-    a = ax1.plot(days, cum1, linestyle='-', label="1")
-    b = ax1.plot(days, cum2, linestyle='-', label="2")
-    c = ax1.plot(days, cum3, linestyle='-', label="3")
+    a = ax1.plot(days, cum1, linestyle='-', label="Phase 1 limit")
+    b = ax1.plot(days, cum2, linestyle='-', label="Phase 2 limit")
+    c = ax1.plot(days, cum3, linestyle='-', label="Phase 3 limit")
     d = ax2.plot(days, s.total_num_in_queue[1:], linestyle='--',label="Number of patients")
     ax1.set_xlabel('Days')
     ax1.set_ylabel("Share of patients violating the time limit")
@@ -995,7 +1017,7 @@ def time_limit_violation_plot(s, sim_days, warm_up_period):
     ax1.set_ylim(ymax=1)
     lns = a+b+c+d
     labs = [l.get_label() for l in lns]
-    plt.legend(loc='best')
+    ax1.legend(lns, labs, loc='best')
   
 
     plt.title('Time limit violations')
