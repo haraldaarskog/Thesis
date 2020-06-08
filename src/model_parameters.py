@@ -137,9 +137,9 @@ t,m,m,m,m,m,m,m,
 t,m,m,m,m,m,m,
 t,m,m,m,m])
 
-f1 = 6
-s1 = 22
-t1 = 36
+f1 = 1#6
+s1 = 3#22
+t1 = 6#36
 
 
 Time_limits_test = np.array([
@@ -168,21 +168,21 @@ t1,m,m,m,m])
 
 L_rt = (11/40) * np.array([
         [160,160,160,160,160,0,0],#Physician
-        [100,100,100,100,100,0,0],#Gynecologist
-        [100,100,100,100,100,0,0],#Radiologist
-        [100,100,100,100,100,0,0],#Radiographer
-        [100,100,100,100,100,0,0],#Pathologist
-        [100,100,100,100,100,0,0],#Surgeon
-        [100,100,100,100,100,0,0],#Nurse
-        [100,100,100,100,100,0,0],#CT scanner
-        [100,100,100,100,100,0,0], #MRI scanner
+        [80,80,80,80,80,0,0],#Gynecologist
+        [80,80,80,80,80,0,0],#Radiologist
+        [160,160,160,160,160,0,0],#Radiographer
+        [160,160,160,160,160,0,0],#Pathologist
+        [160,160,160,160,160,0,0],#Surgeon
+        [160,160,160,160,160,0,0],#Nurse
+        [16,16,16,16,16,0,0],#CT scanner
+        [16,16,16,16,16,0,0], #MRI scanner
         [100,100,100,100,100,0,0],#Operating room
         [100,100,100,100,100,0,0], #laboratory(biopsy)
         [100,100,100,100,100,0,0], #outpatient clinic
         [1000,1000,1000,1000,1000,0,0], #Bed, not used in model
         [100,100,100,100,100,0,0], # Day unit
         [100,100,100,100,100,0,0], # Radiotherapy laboratory
-        [100,100,100,100,100,0,0]]) # Meeting room
+        [1000,1000,1000,1000,1000,0,0]]) # Meeting room
 
 resource_dict={
 ###Staff

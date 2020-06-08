@@ -40,6 +40,14 @@ class Simulation:
         self.serviced_patient_history = {}
         self.patient_exit_list = []
 
+    def get_discharged_patients(self):
+        return_list = []
+        for queue in self.all_queues:
+            if len(queue.discharged_patients) > 0:
+                return_list.extend(queue.discharged_patients)
+        return return_list
+
+
 
     def calculate_resource_usage(self):
         number_of_resources = mp.L_rt.shape[0]
@@ -353,7 +361,7 @@ class Queue:
 
         self.discharged_from_diagnosis = 0
 
-        self.patients_out_of_system = []
+        self.discharged_patients = []
 
         #Resources
         self.resource_usage = {}
@@ -606,7 +614,7 @@ class Queue:
         else:
             self.discharged_from_diagnosis += 1
             patient.exit_day = self.day
-            self.patients_out_of_system.append(patient)
+            self.discharged_patients.append(patient)
 
 
     #Only patients that are moving forward to another queue
@@ -696,7 +704,6 @@ class Patient:
 
 
 def create_total_queue_development(s):
-
     var = 14
 
     cumsum, moving_aves = [0], [0,0,0,0,0,0,0,0,0,0,0,0,0]
@@ -704,7 +711,6 @@ def create_total_queue_development(s):
         cumsum.append(cumsum[i - 1] + x)
         if i >= var:
             moving_ave = (cumsum[i] - cumsum[i - var])/var
-            #can do stuff with moving_ave here
             moving_aves.append(moving_ave)
     plt.plot(s.day_array, s.total_num_in_queue, linestyle='-',label="Number of patients")
     plt.plot(s.day_array, moving_aves, linestyle='--', label="Moving average")
@@ -924,29 +930,72 @@ def resource_usage_plot(s, active_days, sim_horizon):
     plt.grid(True)
     plt.savefig("simulation/sim_figures/resource_usage.png")
     plt.close()
-"""
+
 def time_limit_violation_plot(s, sim_days, warm_up_period):
-    days = np.zeros(sim_days)
+    sim_days += 1
+    days = np.arange(0,sim_days)
+    violations_1 = []
+    violations_2 = []
+    violations_3 = []
+    violation_days_1 = []
+    violation_days_2 = []
+    violation_days_3 = []
+    total_patients_exited = len(s.patient_exit_list) + len(s.get_discharged_patients())
     for day in range(sim_days):
-        violation_amount, violation_days = calculate_time_limit_violations(s, warm_up_period)
-"""
+        violation_amount, violation_days = calculate_time_limit_violations(s, day, warm_up_period)
+        violations_1.append(violation_amount[0])
+        violations_2.append(violation_amount[1])
+        violations_3.append(violation_amount[2])
+        violation_days_1.append(violation_days[0])
+        violation_days_2.append(violation_days[1])
+        violation_days_3.append(violation_days[2])
 
 
-def calculate_time_limit_violations(s, warm_up_period):
+    cum1 = np.divide(np.cumsum(violations_1), total_patients_exited)
+    cum2 = np.divide(np.cumsum(violations_2), total_patients_exited)
+    cum3 = np.divide(np.cumsum(violations_3), total_patients_exited)
+    #cum_tot = np.add(np.add(cum1, cum2), cum3)
+    #cum_tot = np.divide(cum_tot, total_patients_exited)
+    ax1 = plt.gca()
+    ax2 = ax1.twinx()
+    #g = ax1.plot(days, cum_tot, linestyle='-', label="tot")
+    a = ax1.plot(days, cum1, linestyle='-', label="1")
+    b = ax1.plot(days, cum2, linestyle='-', label="2")
+    c = ax1.plot(days, cum3, linestyle='-', label="3")
+    d = ax2.plot(days, s.total_num_in_queue[1:], linestyle='--',label="Number of patients")
+    ax1.set_xlabel('Days')
+    ax1.set_ylabel("Share of patients violating the time limit")
+    ax2.set_ylabel("Number of patients")
+    ax1.set_ylim(ymax=1)
+    lns = a+b+c+d
+    labs = [l.get_label() for l in lns]
+    ax1.legend(lns, labs, loc=0)
+
+    plt.title('Time limit violations')
+    ax1.grid()
+    plt.savefig("simulation/sim_figures/time_limit_violations.png")
+    plt.close()
+
+
+
+def calculate_time_limit_violations(s, this_day, warm_up_period):
     time_limit_violations=[0,0,0]
     total_number_of_days_exceeding_limit = [0,0,0]
-    for patient in s.patient_exit_list:
+    exit_list = s.patient_exit_list
+    discharged_list = s.get_discharged_patients()
+    joined_list = np.append(exit_list, discharged_list)
+    for patient in joined_list:
         if patient.entering_day >= warm_up_period:
             for queue in patient.queue_history:
-                queue_stage = find_queue_stage(queue)
-                if queue_stage == None:
-                    continue
-                queue_time_limit = mp.Time_limits_test[queue]
-                m_value = patient.queue_history[queue][2]
-                if m_value > queue_time_limit:
-                    time_limit_violations[queue_stage] = time_limit_violations[queue_stage] + 1
-                    total_number_of_days_exceeding_limit[queue_stage] = total_number_of_days_exceeding_limit[queue_stage] + (m_value - queue_time_limit)
-                    print(patient.queue_history)
+                if patient.queue_history[queue][0] == this_day or this_day == None:
+                    queue_stage = find_queue_stage(queue)
+                    if queue_stage == None:
+                        continue
+                    queue_time_limit = mp.Time_limits_test[queue]
+                    m_value = patient.queue_history[queue][2]
+                    if m_value > queue_time_limit:
+                        time_limit_violations[queue_stage] = time_limit_violations[queue_stage] + 1
+                        total_number_of_days_exceeding_limit[queue_stage] = total_number_of_days_exceeding_limit[queue_stage] + (m_value - queue_time_limit)
     return time_limit_violations, total_number_of_days_exceeding_limit
 
 def find_queue_stage(j):
@@ -1078,7 +1127,7 @@ def main():
     no_show_percentage = 0.05
     implementation_weeks = 1
     K_rol_hor = 1000
-    warm_up_period = 50
+    warm_up_period = 0
 
 
     number_of_queues = mf.get_total_number_of_queues()
@@ -1091,9 +1140,7 @@ def main():
 
     for i in range(simulation_horizon):
         s.next_day()
-
         if i % (implementation_weeks * 7) == (implementation_weeks * 7 - 1) and i > 0:
-
             E = s.create_E_matrix()
             G = s.create_G_matrix()
 
@@ -1110,6 +1157,9 @@ def main():
             create_cum_distr_all_diagnosis(s, M, warm_up_period)
             create_total_time_in_system(s, M, warm_up_period)
             create_queue_development_all_pathways(s)
+            #print(calculate_time_limit_violations(s, i, warm_up_period))
+            time_limit_violation_plot(s, i, warm_up_period)
+
             #create_stacked_plot(s)
             if i > 6:
                 create_total_queue_development(s)
@@ -1134,7 +1184,7 @@ def main():
     for p in s.patient_exit_list:
         print(p, p.queue_history)
     print("Avg. waiting time:", s.calculate_waiting_times(warm_up_period))
-    print(calculate_time_limit_violations(s, warm_up_period))
+    print(calculate_time_limit_violations(s, warm_up_period, None))
 
 
 if __name__ == '__main__':
