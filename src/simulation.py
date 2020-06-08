@@ -926,32 +926,13 @@ def resource_usage_plot(s, active_days, sim_horizon):
         for r in range(mp.L_rt.shape[0]):
             arr_available[d] = arr_available[d] + mp.L_rt[r, d % 7] 
     
-    
-    
-    #RADIOLOGER
-    for r in range(mp.L_rt.shape[0]):
-        for d in range(0, active_days):
-            arr_available_radiologist[d] = mp.L_rt[r, d % 7]
-            
-        for day in res_dict:
-            res_usage = res_dict[day]
-            arr_radiologist[day] = res_usage[r]
-            
-        res3 = average_days(arr_radiologist, len(arr_radiologist))
-        res4 = average_days(arr_available_radiologist, len(arr_available_radiologist))
-        share_of_resources_used_2 = np.divide(res3, res4)
-        plt.plot(np.arange(0, len(share_of_resources_used_2)), share_of_resources_used_2, linestyle='-', label = str(r))
-
-    
     res1 = average_days(arr, len(arr))
     res2 = average_days(arr_available, len(arr_available))
     share_of_resources_used_1 = np.divide(res1, res2)
     
-    
-    
     plt.plot(np.arange(0, len(share_of_resources_used_1)), share_of_resources_used_1, linestyle='-', label = "Resource utilization")
 
-    plt.xlabel('Week')
+    plt.xlabel('Weeks')
     plt.ylabel('Share of total capacity')
     
     plt.legend(loc='best')
@@ -1014,7 +995,7 @@ def time_limit_violation_plot(s, sim_days, warm_up_period):
     ax1.set_xlabel('Days')
     ax1.set_ylabel("Share of patients violating the time limit")
     ax2.set_ylabel("Number of patients")
-    ax1.set_ylim(ymax=1)
+    #ax1.set_ylim(ymax=1)
     lns = a+b+c+d
     labs = [l.get_label() for l in lns]
     ax1.legend(lns, labs, loc='best')

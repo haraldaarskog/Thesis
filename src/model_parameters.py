@@ -166,22 +166,22 @@ t1,m,m,m])
 #L_rt = np.concatenate((np.full((16,5),1000), np.full((16,2),0)), axis=1)
 
 L_rt = np.array([
-        [160,160,160,160,160,0,0],#Physician
-        [80,80,80,80,80,0,0],#Gynecologist
-        [80,80,80,80,80,0,0],#Radiologist
-        [160,160,160,160,160,0,0],#Radiographer
-        [160,160,160,160,160,0,0],#Pathologist
-        [160,160,160,160,160,0,0],#Surgeon
-        [160,160,160,160,160,0,0],#Nurse
-        [16,16,16,16,16,0,0],#CT scanner
-        [16,16,16,16,16,0,0], #MRI scanner
-        [100,100,100,100,100,0,0],#Operating room
-        [100,100,100,100,100,0,0], #laboratory(biopsy)
-        [100,100,100,100,100,0,0], #outpatient clinic
-        [0,0,0,0,0,0,0], #Bed, not used in model
-        [100,100,100,100,100,0,0], # Day unit
-        [100,100,100,100,100,0,0], # Radiotherapy laboratory
-        [100,100,100,100,100,0,0]]) # Meeting room
+        [160,160,160,160,160,0,0],#Physician0
+        [80,80,80,80,80,0,0],#Gynecologist1
+        [80,80,80,80,80,0,0],#Radiologist2
+        [160,160,160,160,160,0,0],#Radiographer3
+        [160,160,160,160,160,0,0],#Pathologist4
+        [160,160,160,160,160,0,0],#Surgeon5
+        [160,160,160,160,160,0,0],#Nurse6
+        [16,16,16,16,16,0,0],#CT scanner7
+        [16,16,16,16,16,0,0], #MRI scanner8
+        [100,100,100,100,100,0,0],#Operating room9
+        [100,100,100,100,100,0,0], #laboratory(biopsy)10
+        [100,100,100,100,100,0,0], #outpatient clinic11
+        [0,0,0,0,0,0,0], #Bed, not used in model12
+        [100,100,100,100,100,0,0], # Day unit13
+        [100,100,100,100,100,0,0], # Radiotherapy laboratory14
+        [100,100,100,100,100,0,0]]) # Meeting room15
 
 resource_dict={
 ###Staff
