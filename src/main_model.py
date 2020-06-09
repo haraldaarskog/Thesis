@@ -77,7 +77,7 @@ def optimize_model(weeks, N_input, M_input, shift, with_rolling_horizon, in_iter
     if with_rolling_horizon == True:
         A_jt = mf.old_solution("output/model_solution.sol", "b", shift)
         #E_jnm = mf.create_E_jnm(total_queues, N, M, shift, sol_file_name)
-        c_jtnm_old = mf.old_solution("output/model_solution.sol", "c", 0)
+        #c_jtnm_old = mf.old_solution("output/model_solution.sol", "c", 0)
         #G_jtnm = mf.calculate_rollover_service(total_queues, Time_periods, N, M, shift, c_jtnm_old, Q_ij, M_j)
         if E is None or G is None:
             E_jnm = np.zeros((total_queues, N, M))

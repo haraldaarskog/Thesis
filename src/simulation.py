@@ -78,7 +78,7 @@ class Simulation:
         for r in resources:
             res_cap = mp.L_rt[r, 0]
             resource_usage_now = resource_usage[r]
-            if resource_usage_now + queue.activity_duration > res_cap:
+            if resource_usage_now + mp.activity_resource_dict[queue.activity][r] > res_cap: # queue.activity_duration
                 return False
         return True
 
@@ -925,7 +925,7 @@ def resource_usage_plot(s, active_days, sim_horizon):
     for d in range(0, active_days):
         for r in range(mp.L_rt.shape[0]):
             arr_available[d] = arr_available[d] + mp.L_rt[r, d % 7] 
-    
+    print("res_usage", res_usage)
     res1 = average_days(arr, len(arr))
     res2 = average_days(arr_available, len(arr_available))
     share_of_resources_used_1 = np.divide(res1, res2)
@@ -988,9 +988,9 @@ def time_limit_violation_plot(s, sim_days, warm_up_period):
     ax1 = plt.gca()
     ax2 = ax1.twinx()
     #g = ax1.plot(days, cum_tot, linestyle='-', label="tot")
-    a = ax1.plot(days, cum1, linestyle='-', label="Phase 1 limit")
-    b = ax1.plot(days, cum2, linestyle='-', label="Phase 2 limit")
-    c = ax1.plot(days, cum3, linestyle='-', label="Phase 3 limit")
+    a = ax1.plot(days, cum1, linestyle='-', label="Phase 1")
+    b = ax1.plot(days, cum2, linestyle='-', label="Phase 2")
+    c = ax1.plot(days, cum3, linestyle='-', label="Phase 3")
     d = ax2.plot(days, s.total_num_in_queue[1:], linestyle='--',label="Number of patients")
     ax1.set_xlabel('Days')
     ax1.set_ylabel("Share of patients violating the time limit")
@@ -1144,12 +1144,12 @@ def main():
     arr = [q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24,q25,q26,q27,q28,q29,q30,q31,q32,q33,q34,q35,q36,q37,q38,q39]
 
     #Optimization param
-    weeks = 2
+    weeks = 1
     G = None
     E = None
-    M = 60
-    N = int(np.round(M*3/5))
-    shift = 6
+    M = 80
+    N = 80#int(np.round(M*3/5))
+    shift = 5
 
     #Simulation param
     simulation_horizon = 365
@@ -1157,7 +1157,7 @@ def main():
     no_show_percentage = 0.05
     implementation_weeks = 1
     K_rol_hor = 1000
-    warm_up_period = 0
+    warm_up_period = 0#50
 
 
     number_of_queues = mf.get_total_number_of_queues()
@@ -1167,13 +1167,17 @@ def main():
     scheduled_appointments = mf.from_dict_to_matrix_2(b_variable, (number_of_queues, weeks*7))
     scheduled_appointments = scheduled_appointments[:, :(implementation_weeks * 7)]
     s = Simulation(arr, scheduled_appointments, no_show_percentage)
-
+    sum_1 = np.zeros(16)
     for i in range(simulation_horizon):
         s.next_day()
+        sum_1 += s.calculate_resource_usage_day(i)
+        print(s.calculate_resource_usage_day(i))
         
         if i % (implementation_weeks * 7) == (implementation_weeks * 7 - 1) and i > 0:
             E = s.create_E_matrix()
             G = s.create_G_matrix()
+            print(sum_1)
+            sum_1 = np.zeros(16)
 
             create_capacity_graph(s, i + 1)
             _, b_variable, _ = mm.optimize_model(weeks = weeks, N_input = N, M_input = M, shift = shift, with_rolling_horizon = True, in_iteration = False, weights = None, G = G, E = E, K = K_rol_hor)
@@ -1194,12 +1198,7 @@ def main():
             create_stacked_plot(s)
             if i > 6:
                 create_total_queue_development(s)
-
-
-
-
-
-
+            
 
 
     print("\nSimulation time:", time.time() - start_time)
@@ -1223,6 +1222,3 @@ if __name__ == '__main__':
     print("\n")
     print("******* END  *******")
     print("\n")
-    #array = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
-    #a = average_days(array,15,7)
-    #print(a)
