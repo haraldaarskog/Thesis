@@ -1157,7 +1157,7 @@ def main():
     no_show_percentage = 0.05
     implementation_weeks = 1
     K_rol_hor = 1000
-    warm_up_period = 0#50
+    warm_up_period = 50
 
 
     number_of_queues = mf.get_total_number_of_queues()
