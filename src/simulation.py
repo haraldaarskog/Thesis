@@ -88,10 +88,64 @@ class Simulation:
         number_of_exits = len(self.patient_exit_list)
         if number_of_exits == 0:
             return 0
-        sum = 0
+        total_sum = 0
+        
+        uterine_sum = 0
+        uterine_total_sum = 0
+        
+        cervical_sum = 0
+        cervical_total_sum = 0
+        
+        ovarian_sum = 0
+        ovarian_total_sum = 0
+        
         for patient in self.patient_exit_list:
-            sum += patient.number_of_days_in_system
-        return sum/number_of_exits
+            if patient.entering_day >= warm_up_period:
+                total_sum += patient.number_of_days_in_system
+                if patient.diagnosis == "uterine":
+                    uterine_sum += patient.number_of_days_in_system
+                    uterine_total_sum += 1
+                elif patient.diagnosis == "cervical":
+                    cervical_sum += patient.number_of_days_in_system
+                    cervical_total_sum += 1
+                elif patient.diagnosis == "ovarian":
+                    ovarian_sum += patient.number_of_days_in_system
+                    ovarian_total_sum += 1
+        
+        if number_of_exits == 0:
+            tot = 0
+        else:
+            tot = (total_sum/number_of_exits)
+            
+        if uterine_total_sum == 0:
+            ut = 0
+        else:
+            ut = (uterine_sum/uterine_total_sum)
+            
+        if cervical_total_sum == 0:
+            ce = 0
+        else:    
+            ce = (cervical_sum/cervical_total_sum)
+            
+        if ovarian_total_sum == 0:
+            ov = 0
+        else:
+            ov = (ovarian_sum/ovarian_total_sum)
+        
+        return tot, ut, ce, ov 
+    
+    #Calculates the number of waiting periods per queue and the number of patients entering each queue
+    def calculate_waiting_periods_per_queue(self, warm_up_period):
+        queue_array = np.zeros(mf.get_total_number_of_queues())
+        patients_in_queue = np.zeros(mf.get_total_number_of_queues())
+        for patient in self.patient_exit_list:
+            if patient.entering_day >= warm_up_period:
+                for queue in patient.queue_history:
+                    n_value = patient.queue_history[queue][1]
+                    queue_array[queue] = queue_array[queue] + n_value
+                    patients_in_queue[queue] = queue_array[queue] + 1
+        return queue_array, patients_in_queue
+            
 
 
 
@@ -1007,6 +1061,52 @@ def time_limit_violation_plot(s, sim_days, warm_up_period):
     plt.close()
 
 
+def time_limit_violation_plot_2(s, sim_days, warm_up_period):
+    sim_days += 1
+    days = np.arange(0,sim_days)
+    violations_1 = []
+    violations_2 = []
+    violations_3 = []
+    violation_days_1 = []
+    violation_days_2 = []
+    violation_days_3 = []
+    total_patients_exited = len(s.patient_exit_list) + len(s.get_discharged_patients())
+    for day in range(sim_days):
+        violation_amount, violation_days = calculate_time_limit_violations(s, day, warm_up_period)
+        violations_1.append(violation_amount[0])
+        violations_2.append(violation_amount[1])
+        violations_3.append(violation_amount[2])
+        violation_days_1.append(violation_days[0])
+        violation_days_2.append(violation_days[1])
+        violation_days_3.append(violation_days[2])
+
+
+    cum1 = np.divide(np.cumsum(violations_1), total_patients_exited)
+    cum2 = np.divide(np.cumsum(violations_2), total_patients_exited)
+    cum3 = np.divide(np.cumsum(violations_3), len(s.patient_exit_list))
+    #cum_tot = np.add(np.add(cum1, cum2), cum3)
+    #cum_tot = np.divide(cum_tot, total_patients_exited)
+    ax1 = plt.gca()
+    ax2 = ax1.twinx()
+    #g = ax1.plot(days, cum_tot, linestyle='-', label="tot")
+    a = ax1.plot(days, cum1, linestyle='-', label="Phase 1")
+    b = ax1.plot(days, cum2, linestyle='-', label="Phase 2")
+    c = ax1.plot(days, cum3, linestyle='-', label="Phase 3")
+    d = ax2.plot(days, s.total_num_in_queue[1:], linestyle='--',label="Number of patients")
+    ax1.set_xlabel('Days')
+    ax1.set_ylabel("Share of patients violating the time limit")
+    ax2.set_ylabel("Number of patients")
+    #ax1.set_ylim(ymax=1)
+    lns = a+b+c+d
+    labs = [l.get_label() for l in lns]
+    ax1.legend(lns, labs, loc='best')
+  
+
+    plt.title('Time limit violations')
+    ax1.grid()
+    plt.savefig("simulation/sim_figures/time_limit_violations.png")
+    plt.close()
+
 
 def calculate_time_limit_violations(s, this_day, warm_up_period):
     time_limit_violations=[0,0,0]
@@ -1148,7 +1248,7 @@ def main():
     G = None
     E = None
     M = 80
-    N = 80#int(np.round(M*3/5))
+    N = 80
     shift = 6
 
     #Simulation param
@@ -1177,7 +1277,9 @@ def main():
             E = s.create_E_matrix()
             G = s.create_G_matrix()
             print(sum_1)
-            sum_1 = np.zeros(16)
+            print(s.calculate_waiting_times(warm_up_period))
+            print(s.calculate_waiting_periods_per_queue(warm_up_period))
+            
 
             create_capacity_graph(s, i + 1)
             _, b_variable, _ = mm.optimize_model(weeks = weeks, N_input = N, M_input = M, shift = shift, with_rolling_horizon = True, in_iteration = False, weights = None, G = G, E = E, K = K_rol_hor)
@@ -1196,6 +1298,8 @@ def main():
             resource_usage_plot(s, i + 1, simulation_horizon)
 
             create_stacked_plot(s)
+            
+            
             if i > 6:
                 create_total_queue_development(s)
             
@@ -1209,8 +1313,8 @@ def main():
     print("Discharged from diagnosis:",s.summarize_discharged_from_diagnosis())
     if s.total_patients_generated > 0:
         print("Exited/generated:",(s.total_patients_exited + s.summarize_discharged_from_diagnosis())/s.total_patients_generated)
-    print("Avg. waiting time:", s.calculate_waiting_times(warm_up_period))
-    print(calculate_time_limit_violations(s, simulation_horizon, warm_up_period))
+    print("Waiting times:",s.calculate_waiting_times(warm_up_period))
+    print(s.calculate_waiting_periods_per_queue(warm_up_period))
 
 
 
