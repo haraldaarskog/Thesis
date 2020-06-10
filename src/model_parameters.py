@@ -166,22 +166,23 @@ t1,m,m,m])
 #L_rt = np.concatenate((np.full((16,5),1000), np.full((16,2),0)), axis=1)
 
 L_rt = np.array([
-        [40,40,40,40,40,0,0],#Physician0 - Begrensende
+        [45,45,45,45,45,0,0],#Physician0 - Begrensende
         [5,5,5,5,5,0,0],#Gynecologist1 - Begrensende
         [4,4,4,4,4,0,0],#Radiologist2
         [4,4,4,4,4,0,0],#Radiographer3
         [4,4,4,4,4,0,0],#Pathologist4 - Begrensende
         [0,0,0,0,0,0,0],#Surgeon5
-        [40,40,40,40,40,0,0],#Nurse6 - begrensende
+        [45,45,45,45,45,0,0],#Nurse6 - begrensende
         [2,2,2,2,2,0,0],#CT scanner7
         [2,2,2,2,2,0,0], #MRI scanner8
-        [8,8,8,8,8,0,0],#Operating room9
+        [16,16,16,16,16,0,0],#Operating room9
         [2,2,2,2,2,0,0], #laboratory(biopsy)10
         [4,4,4,4,4,0,0], #outpatient clinic11
         [0,0,0,0,0,0,0], #Bed, not used in model12
         [15,15,15,15,15,0,0], # Day unit13
         [3,3,3,3,3,0,0], # Radiotherapy laboratory14
         [0,0,0,0,0,0,0]]) # Meeting room15
+
 
 resource_dict={
 ###Staff
