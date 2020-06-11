@@ -89,6 +89,7 @@ class Simulation:
         if number_of_exits_total == 0:
             return 0
         total_sum = 0
+        number_of_patients=0
         
         uterine_sum = 0
         uterine_total_sum = 0
