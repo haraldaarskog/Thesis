@@ -138,7 +138,7 @@ t,m,m,m,m,
 t,m,m])
 
 
-f1 = 0#6
+f1 = 6
 s1 = 22
 t1 = 36
 
@@ -163,7 +163,6 @@ t1,m,m,m])
 
 
 #Resource capacity for resource r at day t in a week
-#L_rt = np.concatenate((np.full((16,5),1000), np.full((16,2),0)), axis=1)
 
 L_rt = np.array([
         [45,45,45,45,45,0,0],#Physician0 - Begrensende
@@ -208,7 +207,7 @@ resource_dict={
 activity_resource_dict = {
 0: {},
 1: {1:1, 6:2, 11:1},
-2: {1:1, 4:1, 10:1},
+2: {1:0.5, 4:0.5, 10:0.5},
 3: {2:0.5, 3:1, 7:0.5},
 4: {2:0.5, 3:1, 8:0.5},
 5: {0:5},

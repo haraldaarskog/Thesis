@@ -85,8 +85,8 @@ class Simulation:
 
 
     def calculate_waiting_times(self, warm_up_period):
-        number_of_exits = len(self.patient_exit_list)
-        if number_of_exits == 0:
+        number_of_exits_total = len(self.patient_exit_list)
+        if number_of_exits_total == 0:
             return 0
         total_sum = 0
         
@@ -102,6 +102,7 @@ class Simulation:
         for patient in self.patient_exit_list:
             if patient.entering_day >= warm_up_period:
                 total_sum += patient.number_of_days_in_system
+                number_of_patients += 1
                 if patient.diagnosis == "uterine":
                     uterine_sum += patient.number_of_days_in_system
                     uterine_total_sum += 1
@@ -112,10 +113,10 @@ class Simulation:
                     ovarian_sum += patient.number_of_days_in_system
                     ovarian_total_sum += 1
         
-        if number_of_exits == 0:
+        if number_of_patients == 0:
             tot = 0
         else:
-            tot = (total_sum/number_of_exits)
+            tot = (total_sum/number_of_patients)
             
         if uterine_total_sum == 0:
             ut = 0
@@ -143,7 +144,7 @@ class Simulation:
                 for queue in patient.queue_history:
                     n_value = patient.queue_history[queue][1]
                     queue_array[queue] = queue_array[queue] + n_value
-                    patients_in_queue[queue] = queue_array[queue] + 1
+                    patients_in_queue[queue] = patients_in_queue[queue] + 1
         return queue_array, patients_in_queue
             
 
@@ -1277,6 +1278,7 @@ def main():
             E = s.create_E_matrix()
             G = s.create_G_matrix()
             print(sum_1)
+            sum_1 = np.zeros(16)
             print(s.calculate_waiting_times(warm_up_period))
             print(s.calculate_waiting_periods_per_queue(warm_up_period))
             
